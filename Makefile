@@ -29,5 +29,5 @@ clean:
 image: Dockerfile
 	$(DOCKER) build -f Dockerfile -t $(IMAGE_REPO):$(VERSION) .
 
-push-image:
+push-image: image
 	$(DOCKER) push $(IMAGE_REPO):$(VERSION)
