@@ -1,6 +1,9 @@
 package main
 
 import (
+	"flag"
+	"fmt"
+	"os"
 	"path"
 	"time"
 
@@ -14,6 +17,10 @@ import (
 	"github.com/webb-ai/k8s-agent/pkg/k8s"
 	controllerruntime "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
+)
+
+var (
+	BuildVersion = "N/A"
 )
 
 var (
@@ -36,6 +43,15 @@ func newRotateFileLogger(dir, fileName string, maxSizeMb, maxAge, maxBackups int
 }
 
 func main() {
+	var version bool
+	flag.BoolVar(&version, "version", false, "show version")
+	flag.Parse()
+
+	if version {
+		fmt.Printf("webb.ai k8s agent version %s\n", BuildVersion)
+		os.Exit(0)
+	}
+
 	// Config precedence:
 	//
 	// * --kubeconfig flag pointing at a file
