@@ -2,41 +2,78 @@ package k8s
 
 import (
 	"context"
+	"time"
+
+	"github.com/rs/zerolog"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/dynamic/dynamicinformer"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/klog/v2"
-	"time"
 )
 
 type Collector struct {
 	DefaultResyncPeriod time.Duration
 	DynamicClient       dynamic.Interface
 
+	logger          zerolog.Logger
 	informerFactory dynamicinformer.DynamicSharedInformerFactory
+}
+
+type ResourceChangeEvent struct {
+	OldObject runtime.Object `json:"oldObject"`
+	NewObject runtime.Object `json:"newObject"`
 }
 
 func NewCollector(
 	defaultResyncPeriod time.Duration,
 	dynamicClient dynamic.Interface,
+	logger zerolog.Logger,
 ) *Collector {
 	return &Collector{
 		DefaultResyncPeriod: defaultResyncPeriod,
 		DynamicClient:       dynamicClient,
+		logger:              logger,
 	}
 }
 
 func (c *Collector) OnAdd(obj interface{}) {
 	// TODO: retry on retryable errors
-	klog.Infof("called on add %v", obj)
+	runtimeObject, ok := obj.(runtime.Object)
+	if !ok {
+		return
+	}
+
+	c.logger.Info().
+		Any("payload", ResourceChangeEvent{NewObject: runtimeObject}).Msg("object_add")
 }
 
 func (c *Collector) OnUpdate(oldObj, newObj interface{}) {
-	klog.Infof("called on update %v", newObj)
+	oldRuntimeObj, ok := oldObj.(runtime.Object)
+	if !ok {
+		return
+	}
+
+	newRuntimeObj, ok := newObj.(runtime.Object)
+	if !ok {
+		return
+	}
+
+	c.logger.Info().
+		Any("payload", ResourceChangeEvent{
+			OldObject: oldRuntimeObj,
+			NewObject: newRuntimeObj,
+		}).Msg("object_update")
 }
 
 func (c *Collector) OnDelete(obj interface{}) {
-	klog.Infof("called on delete %v", obj)
+	runtimeObject, ok := obj.(runtime.Object)
+	if !ok {
+		return
+	}
+
+	c.logger.Info().
+		Any("payload", ResourceChangeEvent{OldObject: runtimeObject}).Msg("object_delete")
 }
 
 func (c *Collector) Start(ctx context.Context) error {
@@ -53,7 +90,10 @@ func (c *Collector) Start(ctx context.Context) error {
 	for _, gvr := range WatchedGVRs {
 		klog.Infof("starting to watch for resource %v", gvr)
 		informer := c.informerFactory.ForResource(gvr)
-		informer.Informer().AddEventHandler(eventHandler)
+		_, err := informer.Informer().AddEventHandler(eventHandler)
+		if err != nil {
+			klog.Warningf("unable to watch for resource %v: %v", gvr, err)
+		}
 	}
 	c.informerFactory.WaitForCacheSync(ctx.Done())
 	c.informerFactory.Start(ctx.Done())

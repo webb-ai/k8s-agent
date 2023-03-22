@@ -1,9 +1,13 @@
 package main
 
 import (
+	"path"
+	"time"
+
+	"github.com/rs/zerolog"
+	"gopkg.in/natefinch/lumberjack.v2"
 	"k8s.io/client-go/dynamic"
 	klog "k8s.io/klog/v2"
-	"time"
 
 	apiserver "k8s.io/apiserver/pkg/server"
 
@@ -19,6 +23,17 @@ var (
 	resyncPeriod           = time.Second * 10
 	metricsAddress         = ":9090"
 )
+
+func newRotateFileLogger(dir, fileName string, maxSizeMb, maxAge, maxBackups int) zerolog.Logger {
+	writer := &lumberjack.Logger{
+		Filename:   path.Join(dir, fileName),
+		MaxSize:    maxSizeMb,
+		MaxAge:     maxAge,
+		MaxBackups: maxBackups,
+		Compress:   true,
+	}
+	return zerolog.New(writer).With().Timestamp().Logger()
+}
 
 func main() {
 	// Config precedence:
@@ -42,7 +57,7 @@ func main() {
 	klog.Infof("creating controller manager")
 	controllerManager, err := controllerruntime.NewManager(config, controllerruntime.Options{
 		LivenessEndpointName: "/healthz",
-		MetricsBindAddress:   ":9090",
+		MetricsBindAddress:   metricsAddress,
 	})
 	if err != nil {
 		klog.Fatal(err)
@@ -50,7 +65,9 @@ func main() {
 
 	klog.Infof("creating resource collector")
 	dynamicClient := dynamic.NewForConfigOrDie(config)
-	collector := k8s.NewCollector(resyncPeriod, dynamicClient)
+	logger := newRotateFileLogger("/var/log/webb-ai", "k8s_resource.log", 100, 28, 3)
+	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
+	collector := k8s.NewCollector(resyncPeriod, dynamicClient, logger)
 
 	klog.Infof("adding resource collector to controller manager")
 	if err := controllerManager.Add(collector); err != nil {

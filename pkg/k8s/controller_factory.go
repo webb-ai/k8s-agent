@@ -1,8 +1,9 @@
 package k8s
 
 import (
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sync"
+
+	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 type ControllerInitFunc func(gvk schema.GroupVersionKind) error
@@ -47,8 +48,8 @@ func NewControllerFactory(controllerInitFunc ControllerInitFunc) *ControllerFact
 	}
 }
 
-func newFakeControllerFactory() *ControllerFactory {
-	return NewControllerFactory(func(gvk schema.GroupVersionKind) error {
-		return nil
-	})
-}
+// func newFakeControllerFactory() *ControllerFactory {
+// 	return NewControllerFactory(func(gvk schema.GroupVersionKind) error {
+// 		return nil
+//	})
+// }

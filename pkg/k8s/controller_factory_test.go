@@ -3,9 +3,10 @@ package k8s
 import (
 	"fmt"
 
+	"testing"
+
 	"github.com/stretchr/testify/assert"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"testing"
 )
 
 func TestControllerFactory(t *testing.T) {
