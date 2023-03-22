@@ -1,7 +1,9 @@
 GOCMD?=go
+DOCKER?=docker
 
 PKG_SRC=$(shell find . -type f -name '*.go')
 VERSION=$(shell git describe --dirty --tags)
+IMAGE_REPO=public.ecr.aws/p5v6t9h8/k8s-resource-collector
 LDFLAGS=-ldflags "-X main.BuildVersion=$(VERSION)"
 
 ## Dev
@@ -23,3 +25,9 @@ build:
 
 clean:
 	-rm collector
+
+image: Dockerfile
+	$(DOCKER) build -f Dockerfile -t $(IMAGE_REPO):$(VERSION) .
+
+push-image:
+	$(DOCKER) push $(IMAGE_REPO):$(VERSION)
