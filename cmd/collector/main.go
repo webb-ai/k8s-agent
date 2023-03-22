@@ -72,8 +72,12 @@ func main() {
 
 	klog.Infof("creating controller manager")
 	controllerManager, err := controllerruntime.NewManager(config, controllerruntime.Options{
-		LivenessEndpointName: "/healthz",
-		MetricsBindAddress:   metricsAddress,
+		LivenessEndpointName:          "/healthz",
+		MetricsBindAddress:            metricsAddress,
+		LeaderElection:                true,
+		LeaderElectionID:              "webb-ai.k8s-resource-collector",
+		LeaderElectionNamespace:       os.Getenv("POD_NAMESPACE"),
+		LeaderElectionReleaseOnCancel: true,
 	})
 	if err != nil {
 		klog.Fatal(err)
