@@ -8,8 +8,8 @@ metadata:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: resource-collector
   namespace: webbai
+  name: resource-collector
   labels:
     app: resource-collector
 spec:
@@ -22,8 +22,9 @@ spec:
       labels:
         app: resource-collector
     spec:
+      serviceAccountName: resource-collector
       containers:
-        - image: public.ecr.aws/p5v6t9h8/k8s-resource-collector:v0.1-3-g5351724
+        - image: public.ecr.aws/p5v6t9h8/k8s-resource-collector:v0.1-4-g5d5e34d
           imagePullPolicy: Always
           name: resource-collector
           command:
@@ -32,3 +33,64 @@ spec:
             requests:
               memory: "512Mi"
               cpu: "0.2"
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  namespace: webbai
+  name: resource-collector
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: webbai-resource-collector
+rules:
+  - apiGroups: [""]
+    resources:
+      - events
+      - namespaces
+      - nodes
+      - persistentvolumeclaims
+      - persistentvolumes
+      - pods
+      - resourcequotas
+      - serviceaccounts
+      - services
+    verbs:
+      - list
+      - watch
+      - get
+  - apiGroups: ["apps"]
+    resources:
+      - daemonsets
+      - deployments
+      - replicasets
+      - statefulsets
+    verbs:
+      - list
+      - watch
+      - get
+  - apiGroups: ["batch"]
+    resources:
+      - cronjobs
+      - jobs
+    verbs:
+      - list
+      - watch
+      - get
+  - apiGroups: ["coordination.k8s.io"]
+    resources: ["leases"]
+    verbs: ["get", "list", "watch", "create", "update"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: webbai-resource-collector
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: webbai-resource-collector
+subjects:
+  - kind: ServiceAccount
+    name: resource-collector
+    namespace: webbai
