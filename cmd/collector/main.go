@@ -85,7 +85,7 @@ func main() {
 
 	klog.Infof("creating resource collector")
 	dynamicClient := dynamic.NewForConfigOrDie(config)
-	logger := newRotateFileLogger("/var/log/webb-ai", "k8s_resource.log", 100, 28, 3)
+	logger := newRotateFileLogger("/var/log/webb-ai", "k8s_resource.log", 100, 28, 10)
 	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
 	collector := k8s.NewCollector(resyncPeriod, dynamicClient, logger)
 
