@@ -41,6 +41,7 @@ func (c *Collector) OnAdd(obj interface{}) {
 	// TODO: retry on retryable errors
 	runtimeObject, ok := obj.(runtime.Object)
 	if !ok {
+		klog.Warningf("object isn't a k8s runtime object, skipping")
 		return
 	}
 
@@ -51,24 +52,48 @@ func (c *Collector) OnAdd(obj interface{}) {
 func (c *Collector) OnUpdate(oldObj, newObj interface{}) {
 	oldRuntimeObj, ok := oldObj.(runtime.Object)
 	if !ok {
+		klog.Warningf("object isn't a k8s runtime object, skipping")
 		return
 	}
 
 	newRuntimeObj, ok := newObj.(runtime.Object)
 	if !ok {
+		klog.Warningf("object isn't a k8s runtime object, skipping")
 		return
 	}
 
-	c.logger.Info().
-		Any("payload", ResourceChangeEvent{
-			OldObject: oldRuntimeObj,
-			NewObject: newRuntimeObj,
-		}).Msg("object_update")
+	oldUnstructured, err := toUnstructured(oldRuntimeObj)
+	if err != nil {
+		klog.Warningf("can't convert k8s runtime object to go typed object, skipping")
+		return
+	}
+	newUnstructured, err := toUnstructured(newRuntimeObj)
+	if err != nil {
+		klog.Warningf("can't convert k8s runtime object to go typed object, skipping")
+	}
+
+	if oldUnstructured.GetResourceVersion() != newUnstructured.GetResourceVersion() {
+		klog.Infof("detected resource version change of object")
+		c.logger.Info().
+			Any("payload", ResourceChangeEvent{
+				OldObject: oldRuntimeObj,
+				NewObject: newRuntimeObj,
+			}).Msg("object_update")
+	} else if hasStatusChanged(oldUnstructured, newUnstructured) {
+		klog.Infof("detected status change of object")
+		c.logger.Info().
+			Any("payload", ResourceChangeEvent{
+				OldObject: oldRuntimeObj,
+				NewObject: newRuntimeObj,
+			}).Msg("object_update")
+	}
+
 }
 
 func (c *Collector) OnDelete(obj interface{}) {
 	runtimeObject, ok := obj.(runtime.Object)
 	if !ok {
+		klog.Warningf("object isn't a k8s runtime object, skipping")
 		return
 	}
 
