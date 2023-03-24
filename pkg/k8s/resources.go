@@ -22,4 +22,8 @@ var WatchedGVRs = []schema.GroupVersionResource{
 
 	{Group: "batch", Version: "v1", Resource: "cronjobs"},
 	{Group: "batch", Version: "v1", Resource: "jobs"},
+
+	{Group: "networking.k8s.io", Version: "v1", Resource: "ingressclasses"},
+	{Group: "networking.k8s.io", Version: "v1", Resource: "ingresses"},
+	{Group: "networking.k8s.io", Version: "v1", Resource: "networkpolicies"},
 }

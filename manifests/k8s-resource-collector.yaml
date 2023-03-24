@@ -78,6 +78,15 @@ rules:
       - list
       - watch
       - get
+  - apiGroups: ["networking.k8s.io"]
+    resources:
+      - ingressclasses
+      - ingresses
+      - networkpolicies
+    verbs:
+      - list
+      - watch
+      - get
   - apiGroups: ["coordination.k8s.io"]
     resources: ["leases"]
     verbs: ["get", "list", "watch", "create", "update"]
