@@ -19,7 +19,7 @@ jobs:
         uses: golangci/golangci-lint-action@v3
         with:
           version: latest
-  unit test:
+  unit_test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
