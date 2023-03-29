@@ -4,7 +4,6 @@ on:
   push:
     branches: [ master ]
   pull_request:
-    branches: [ master ]
   workflow_dispatch:
     inputs:
       tags:
@@ -27,6 +26,6 @@ jobs:
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v3
         with:
-          version: v1.29
+          version: latest
       - name: unit test
         run: make check
