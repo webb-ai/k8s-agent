@@ -1,10 +1,11 @@
 package http
 
 import (
-	"github.com/hashicorp/go-retryablehttp"
 	"io"
-	"k8s.io/apimachinery/pkg/util/json"
 	"net/http"
+
+	"github.com/hashicorp/go-retryablehttp"
+	"k8s.io/apimachinery/pkg/util/json"
 )
 
 type tokenJSON struct {

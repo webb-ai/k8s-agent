@@ -17,7 +17,7 @@ lint:
 test:
 	$(GOCMD) test -v -cover ./...
 
-check: format lint test
+check: lint test
 
 ## Build
 build:
