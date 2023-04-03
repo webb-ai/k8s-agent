@@ -43,7 +43,7 @@ func GetAccessToken(retryClient *retryablehttp.Client, tokenUrl, clientId, clien
 	return token.AccessToken, nil
 }
 
-func SendRequestWithToken(retryClient *retryablehttp.Client, url, token, body string) (*http.Response, error) {
+func SendRequestWithToken(retryClient *retryablehttp.Client, url, token string, body []byte) (*http.Response, error) {
 	request, err := retryablehttp.NewRequest("POST", url, body)
 	if err != nil {
 		return nil, err

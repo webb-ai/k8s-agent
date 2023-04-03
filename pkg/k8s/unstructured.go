@@ -1,14 +1,15 @@
 package k8s
 
 import (
+	"fmt"
 	"reflect"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
-// toUnstructured converts the runtime object to unstructured
-func toUnstructured(obj runtime.Object) (*unstructured.Unstructured, error) {
+// runtimeObjecttoUnstructured converts the runtime object to unstructured
+func runtimeObjecttoUnstructured(obj runtime.Object) (*unstructured.Unstructured, error) {
 	unstructuredObj, err := runtime.DefaultUnstructuredConverter.ToUnstructured(obj)
 
 	if err != nil {
@@ -16,6 +17,15 @@ func toUnstructured(obj runtime.Object) (*unstructured.Unstructured, error) {
 	}
 
 	return &unstructured.Unstructured{Object: unstructuredObj}, nil
+}
+
+// runtimeObjecttoUnstructured converts the runtime object to unstructured
+func interfacetoUnstructured(obj interface{}) (*unstructured.Unstructured, error) {
+	runtimeObj, ok := obj.(runtime.Object)
+	if !ok {
+		return nil, fmt.Errorf("%s isn't a k8s runtime object", obj)
+	}
+	return runtimeObjecttoUnstructured(runtimeObj)
 }
 
 // hasStatusChanged checks whether the status has changed from oldObject to newObject

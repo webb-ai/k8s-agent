@@ -47,13 +47,16 @@ metadata:
 rules:
   - apiGroups: [""]
     resources:
+      - configmaps
       - events
       - namespaces
       - nodes
       - persistentvolumeclaims
       - persistentvolumes
       - pods
+      - podtemplates
       - resourcequotas
+      - secrets
       - serviceaccounts
       - services
     verbs:

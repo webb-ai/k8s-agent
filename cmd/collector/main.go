@@ -87,7 +87,7 @@ func main() {
 	dynamicClient := dynamic.NewForConfigOrDie(config)
 	logger := newRotateFileLogger("/var/log/webb-ai", "k8s_resource.log", 100, 28, 10)
 	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
-	collector := k8s.NewCollector(resyncPeriod, dynamicClient, logger)
+	collector := k8s.NewCollector(resyncPeriod, resyncPeriod*12, dynamicClient, logger)
 
 	klog.Infof("adding resource collector to controller manager")
 	if err := controllerManager.Add(collector); err != nil {
