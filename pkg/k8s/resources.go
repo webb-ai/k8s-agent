@@ -39,7 +39,7 @@ var WatchedGVRs = []schema.GroupVersionResource{
 	podtemplateGVR,
 	replicasetGVR,
 	resourcequotaGVR,
-	secretGVR,
+	// secretGVR,
 	serviceaccountGVR,
 	serviceGVR,
 	statefulsetGVR,

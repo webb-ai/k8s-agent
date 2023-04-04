@@ -15,12 +15,12 @@ import (
 )
 
 type Collector struct {
-	DefaultResyncPeriod      time.Duration
-	ResourceCollectionPeriod time.Duration
-	DynamicClient            dynamic.Interface
-
-	logger          zerolog.Logger
-	informerFactory dynamicinformer.DynamicSharedInformerFactory
+	defaultResyncPeriod        time.Duration
+	resourceCollectionInterval time.Duration
+	dynamicClient              dynamic.Interface
+	logger                     zerolog.Logger
+	client                     api.Client
+	informerFactory            dynamicinformer.DynamicSharedInformerFactory
 }
 
 func NewCollector(
@@ -28,12 +28,14 @@ func NewCollector(
 	resourceCollectionPeriod time.Duration,
 	dynamicClient dynamic.Interface,
 	logger zerolog.Logger,
+	client api.Client,
 ) *Collector {
 	return &Collector{
-		DefaultResyncPeriod:      defaultResyncPeriod,
-		ResourceCollectionPeriod: resourceCollectionPeriod,
-		DynamicClient:            dynamicClient,
-		logger:                   logger,
+		defaultResyncPeriod:        defaultResyncPeriod,
+		resourceCollectionInterval: resourceCollectionPeriod,
+		dynamicClient:              dynamicClient,
+		logger:                     logger,
+		client:                     client,
 	}
 }
 
@@ -47,6 +49,9 @@ func (c *Collector) OnAdd(obj interface{}) {
 
 	event := api.NewResourceChangeEvent(nil, runtimeObject)
 	c.logger.Info().Any("payload", event).Msg("object_add")
+	if c.client != nil {
+		_ = c.client.SendK8sChangeEvent(event)
+	}
 }
 
 func (c *Collector) OnUpdate(oldObj, newObj interface{}) {
@@ -72,6 +77,9 @@ func (c *Collector) OnUpdate(oldObj, newObj interface{}) {
 		c.logger.Info().Any("payload", event).Msg("object_update")
 	}
 
+	if c.client != nil {
+		_ = c.client.SendK8sChangeEvent(event)
+	}
 }
 
 func (c *Collector) OnDelete(obj interface{}) {
@@ -84,13 +92,16 @@ func (c *Collector) OnDelete(obj interface{}) {
 	event := api.NewResourceChangeEvent(runtimeObject, nil)
 
 	c.logger.Info().Any("payload", event).Msg("object_delete")
+	if c.client != nil {
+		_ = c.client.SendK8sChangeEvent(event)
+	}
 }
 
 func (c *Collector) Start(ctx context.Context) error {
 	klog.Infof("starting k8s resource collector process")
 	c.startWorkloadCollectionLoop(ctx)
 
-	c.informerFactory = dynamicinformer.NewDynamicSharedInformerFactory(c.DynamicClient, c.DefaultResyncPeriod)
+	c.informerFactory = dynamicinformer.NewDynamicSharedInformerFactory(c.dynamicClient, c.defaultResyncPeriod)
 
 	eventHandler := cache.ResourceEventHandlerFuncs{
 		AddFunc:    c.OnAdd,
@@ -115,12 +126,12 @@ func (c *Collector) Start(ctx context.Context) error {
 }
 
 func (c *Collector) startWorkloadCollectionLoop(ctx context.Context) {
-	klog.Infof("starting to collect workload resources every %v", c.ResourceCollectionPeriod)
+	klog.Infof("starting to collect workload resources every %v", c.resourceCollectionInterval)
 
 	go func() {
 		for {
 			select {
-			case <-time.After(c.ResourceCollectionPeriod):
+			case <-time.After(c.resourceCollectionInterval):
 				c.collectWorkloadResources(ctx)
 			case <-ctx.Done():
 				return
@@ -132,11 +143,14 @@ func (c *Collector) startWorkloadCollectionLoop(ctx context.Context) {
 func (c *Collector) collectWorkloadResources(ctx context.Context) {
 	for _, gvr := range WorkloadGVRs {
 		klog.Infof("listing all resources for %v", gvr)
-		listResult, err := c.DynamicClient.Resource(gvr).List(ctx, metav1.ListOptions{})
+		listResult, err := c.dynamicClient.Resource(gvr).List(ctx, metav1.ListOptions{})
 		if err != nil {
 			klog.Error(err)
-		} else {
+		} else if len(listResult.Items) > 0 {
 			c.logger.Info().Any("payload", listResult.Items).Msg("resource_list")
+			if c.client != nil {
+				_ = c.client.SendK8sResources(api.NewResourceList(listResult.Items))
+			}
 		}
 	}
 }

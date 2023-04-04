@@ -41,3 +41,7 @@ func NewResourceChangeEvent(oldObj, newObj *unstructured.Unstructured) *Resource
 type ResourceList struct {
 	Objects []unstructured.Unstructured `json:"objects"`
 }
+
+func NewResourceList(objects []unstructured.Unstructured) *ResourceList {
+	return &ResourceList{Objects: objects}
+}

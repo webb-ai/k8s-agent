@@ -7,6 +7,9 @@ import (
 	"path"
 	"time"
 
+	"github.com/webb-ai/k8s-agent/pkg/api"
+	"github.com/webb-ai/k8s-agent/pkg/http"
+
 	"github.com/rs/zerolog"
 	"gopkg.in/natefinch/lumberjack.v2"
 	"k8s.io/client-go/dynamic"
@@ -29,6 +32,7 @@ var (
 	burst                  = 30
 	resyncPeriod           = time.Second * 10
 	metricsAddress         = ":9090"
+	dataDir                = "/app/data/"
 )
 
 func newRotateFileLogger(dir, fileName string, maxSizeMb, maxAge, maxBackups int) zerolog.Logger {
@@ -42,15 +46,36 @@ func newRotateFileLogger(dir, fileName string, maxSizeMb, maxAge, maxBackups int
 	return zerolog.New(writer).With().Timestamp().Logger()
 }
 
+func getWebbaiClient() api.Client {
+	clientId := os.Getenv("CLUSTER_ID")
+	clientSecret := os.Getenv("API_KEY")
+	apiUrl := os.Getenv("API_URL")
+
+	if apiUrl == "" || clientId == "" || clientSecret == "" {
+		return nil
+	}
+
+	return &http.WebbaiHttpClient{
+		ClientId:     clientId,
+		ClientSecret: clientSecret,
+		AuthUrl:      apiUrl + "/oauth/token",
+		ChangeUrl:    apiUrl + "/k8s_changes",
+		ResourceUrl:  "",
+	}
+}
+
 func main() {
 	var version bool
 	flag.BoolVar(&version, "version", false, "show version")
+	flag.StringVar(&dataDir, "data-dir", dataDir, "directory to store staged data")
 	flag.Parse()
 
 	if version {
 		fmt.Printf("webb.ai k8s agent version %s\n", BuildVersion)
 		os.Exit(0)
 	}
+
+	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
 
 	// Config precedence:
 	//
@@ -85,9 +110,8 @@ func main() {
 
 	klog.Infof("creating resource collector")
 	dynamicClient := dynamic.NewForConfigOrDie(config)
-	logger := newRotateFileLogger("/var/log/webb-ai", "k8s_resource.log", 100, 28, 10)
-	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
-	collector := k8s.NewCollector(resyncPeriod, resyncPeriod*12, dynamicClient, logger)
+	logger := newRotateFileLogger(dataDir, "k8s_resource.log", 100, 28, 10)
+	collector := k8s.NewCollector(resyncPeriod, resyncPeriod*12, dynamicClient, logger, getWebbaiClient())
 
 	klog.Infof("adding resource collector to controller manager")
 	if err := controllerManager.Add(collector); err != nil {
