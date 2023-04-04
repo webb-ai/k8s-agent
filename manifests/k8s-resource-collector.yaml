@@ -29,6 +29,8 @@ spec:
           name: resource-collector
           command:
             - /app/collector
+            - --data-dir
+            - /app/data
           resources:
             requests:
               memory: "512Mi"
