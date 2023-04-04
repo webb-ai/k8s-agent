@@ -15,9 +15,9 @@ const (
 )
 
 type ResourceChangeEvent struct {
-	OldObject *unstructured.Unstructured `json:"oldObject"`
-	NewObject *unstructured.Unstructured `json:"newObject"`
-	EventType EventType                  `json:"eventType"`
+	OldObject *unstructured.Unstructured `json:"old_object"`
+	NewObject *unstructured.Unstructured `json:"new_object"`
+	EventType EventType                  `json:"event_type"`
 	Time      int64                      `json:"time"`
 }
 
@@ -40,8 +40,12 @@ func NewResourceChangeEvent(oldObj, newObj *unstructured.Unstructured) *Resource
 
 type ResourceList struct {
 	Objects []unstructured.Unstructured `json:"objects"`
+	Time    int64                       `json:"time"`
 }
 
 func NewResourceList(objects []unstructured.Unstructured) *ResourceList {
-	return &ResourceList{Objects: objects}
+	return &ResourceList{
+		Objects: objects,
+		Time:    time.Now().Unix(),
+	}
 }

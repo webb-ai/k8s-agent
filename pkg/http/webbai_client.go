@@ -62,7 +62,7 @@ func (c *WebbaiHttpClient) sendRequest(url string, data interface{}) error {
 func (c *WebbaiHttpClient) obtainNewToken() error {
 	klog.Infof("request a new token from %s", c.AuthUrl)
 	client := retryablehttp.NewClient()
-	token, err := GetAccessToken(client, c.AuthUrl, c.ClientId, c.ClientSecret, "")
+	token, err := GetAccessToken(client, c.AuthUrl, c.ClientId, c.ClientSecret, c.ClientId)
 	klog.Infof("got access token")
 	if err != nil {
 		klog.Error(err)
