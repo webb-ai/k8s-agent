@@ -21,6 +21,7 @@ type Collector struct {
 	logger                     zerolog.Logger
 	client                     api.Client
 	informerFactory            dynamicinformer.DynamicSharedInformerFactory
+	metrics                    *Metrics
 }
 
 func NewCollector(
@@ -36,6 +37,7 @@ func NewCollector(
 		dynamicClient:              dynamicClient,
 		logger:                     logger,
 		client:                     client,
+		metrics:                    NewMetrics(),
 	}
 }
 
@@ -52,6 +54,12 @@ func (c *Collector) OnAdd(obj interface{}) {
 	if c.client != nil {
 		_ = c.client.SendK8sChangeEvent(event)
 	}
+	c.metrics.ChangeEventCounter.With(
+		map[string]string{
+			EventTypeKey:  "object_add",
+			ObjectKindKey: runtimeObject.GetKind(),
+		},
+	).Inc()
 }
 
 func (c *Collector) OnUpdate(oldObj, newObj interface{}) {
@@ -69,17 +77,20 @@ func (c *Collector) OnUpdate(oldObj, newObj interface{}) {
 
 	event := api.NewResourceChangeEvent(oldObject, newObject)
 
-	if oldObject.GetResourceVersion() != newObject.GetResourceVersion() {
-		klog.Infof("detected resource version change of object")
+	if oldObject.GetResourceVersion() != newObject.GetResourceVersion() || hasStatusChanged(oldObject, newObject) {
+		klog.Infof("detected resource version change or status change of object")
 		c.logger.Info().Any("payload", event).Msg("object_update")
-	} else if hasStatusChanged(oldObject, newObject) {
-		klog.Infof("detected status change of object")
-		c.logger.Info().Any("payload", event).Msg("object_update")
+		if c.client != nil {
+			_ = c.client.SendK8sChangeEvent(event)
+		}
+		c.metrics.ChangeEventCounter.With(
+			map[string]string{
+				EventTypeKey:  "object_update",
+				ObjectKindKey: oldObject.GetKind(),
+			},
+		).Inc()
 	}
 
-	if c.client != nil {
-		_ = c.client.SendK8sChangeEvent(event)
-	}
 }
 
 func (c *Collector) OnDelete(obj interface{}) {
@@ -95,6 +106,12 @@ func (c *Collector) OnDelete(obj interface{}) {
 	if c.client != nil {
 		_ = c.client.SendK8sChangeEvent(event)
 	}
+	c.metrics.ChangeEventCounter.With(
+		map[string]string{
+			EventTypeKey:  "object_delete",
+			ObjectKindKey: runtimeObject.GetKind(),
+		},
+	).Inc()
 }
 
 func (c *Collector) Start(ctx context.Context) error {
