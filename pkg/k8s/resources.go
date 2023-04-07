@@ -25,11 +25,10 @@ var ingressGVR = schema.GroupVersionResource{Group: "networking.k8s.io", Version
 var networkpolicyGVR = schema.GroupVersionResource{Group: "networking.k8s.io", Version: "v1", Resource: "networkpolicies"}
 
 var WatchedGVRs = []schema.GroupVersionResource{
-	// configMapGVR,
+	configMapGVR,
 	cronjobGVR,
 	daemonsetGVR,
 	deploymentGVR,
-	eventGVR,
 	jobGVR,
 	namespaceGVR,
 	nodeGVR,
@@ -39,7 +38,7 @@ var WatchedGVRs = []schema.GroupVersionResource{
 	podtemplateGVR,
 	replicasetGVR,
 	resourcequotaGVR,
-	// secretGVR,
+	secretGVR,
 	serviceaccountGVR,
 	serviceGVR,
 	statefulsetGVR,
@@ -48,7 +47,7 @@ var WatchedGVRs = []schema.GroupVersionResource{
 	networkpolicyGVR,
 }
 
-var WorkloadGVRs = []schema.GroupVersionResource{
+var WorkloadAndEventGVRs = []schema.GroupVersionResource{
 	podGVR,
 	nodeGVR,
 	daemonsetGVR,
@@ -56,4 +55,5 @@ var WorkloadGVRs = []schema.GroupVersionResource{
 	statefulsetGVR,
 	jobGVR,
 	cronjobGVR,
+	eventGVR,
 }

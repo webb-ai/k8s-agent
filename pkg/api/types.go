@@ -1,6 +1,7 @@
 package api
 
 import (
+	"github.com/webb-ai/k8s-agent/pkg/util"
 	"time"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -22,6 +23,8 @@ type ResourceChangeEvent struct {
 }
 
 func NewResourceChangeEvent(oldObj, newObj *unstructured.Unstructured) *ResourceChangeEvent {
+	util.PruneData(oldObj)
+	util.PruneData(newObj)
 	event := &ResourceChangeEvent{
 		OldObject: oldObj,
 		NewObject: newObj,

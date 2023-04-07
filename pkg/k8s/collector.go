@@ -2,6 +2,7 @@ package k8s
 
 import (
 	"context"
+	"github.com/webb-ai/k8s-agent/pkg/util"
 	"time"
 
 	"github.com/webb-ai/k8s-agent/pkg/api"
@@ -43,7 +44,7 @@ func NewCollector(
 
 func (c *Collector) OnAdd(obj interface{}) {
 	// TODO: retry on retryable errors
-	runtimeObject, err := interfacetoUnstructured(obj)
+	runtimeObject, err := util.InterfacetoUnstructured(obj)
 	if err != nil {
 		klog.Error(err)
 		return
@@ -62,39 +63,8 @@ func (c *Collector) OnAdd(obj interface{}) {
 	).Inc()
 }
 
-func (c *Collector) OnUpdate(oldObj, newObj interface{}) {
-	oldObject, err := interfacetoUnstructured(oldObj)
-	if err != nil {
-		klog.Error(err)
-		return
-	}
-
-	newObject, err := interfacetoUnstructured(newObj)
-	if err != nil {
-		klog.Error(err)
-		return
-	}
-
-	event := api.NewResourceChangeEvent(oldObject, newObject)
-
-	if oldObject.GetResourceVersion() != newObject.GetResourceVersion() || hasStatusChanged(oldObject, newObject) {
-		klog.Infof("detected resource version change or status change of object")
-		c.logger.Info().Any("payload", event).Msg("object_update")
-		if c.client != nil {
-			_ = c.client.SendK8sChangeEvent(event)
-		}
-		c.metrics.ChangeEventCounter.With(
-			map[string]string{
-				EventTypeKey:  "object_update",
-				ObjectKindKey: oldObject.GetKind(),
-			},
-		).Inc()
-	}
-
-}
-
 func (c *Collector) OnDelete(obj interface{}) {
-	runtimeObject, err := interfacetoUnstructured(obj)
+	runtimeObject, err := util.InterfacetoUnstructured(obj)
 	if err != nil {
 		klog.Error(err)
 		return
@@ -112,6 +82,41 @@ func (c *Collector) OnDelete(obj interface{}) {
 			ObjectKindKey: runtimeObject.GetKind(),
 		},
 	).Inc()
+}
+
+func (c *Collector) OnUpdate(oldObj, newObj interface{}) {
+	oldObject, err := util.InterfacetoUnstructured(oldObj)
+	if err != nil {
+		klog.Error(err)
+		return
+	}
+
+	newObject, err := util.InterfacetoUnstructured(newObj)
+	if err != nil {
+		klog.Error(err)
+		return
+	}
+
+	if util.IsConfigMapOrSecret(oldObject) && !util.HasDataChanged(oldObject, newObject) {
+		// if a configmap or secret, and the data hasn't changed, skip
+		return
+	}
+
+	if oldObject.GetResourceVersion() != newObject.GetResourceVersion() || util.HasStatusChanged(oldObject, newObject) {
+		klog.Infof("detected resource version change or status change of object")
+		event := api.NewResourceChangeEvent(oldObject, newObject)
+		c.logger.Info().Any("payload", event).Msg("object_update")
+		if c.client != nil {
+			_ = c.client.SendK8sChangeEvent(event)
+		}
+		c.metrics.ChangeEventCounter.With(
+			map[string]string{
+				EventTypeKey:  "object_update",
+				ObjectKindKey: oldObject.GetKind(),
+			},
+		).Inc()
+	}
+
 }
 
 func (c *Collector) Start(ctx context.Context) error {
@@ -149,7 +154,7 @@ func (c *Collector) startWorkloadCollectionLoop(ctx context.Context) {
 		for {
 			select {
 			case <-time.After(c.resourceCollectionInterval):
-				c.collectWorkloadResources(ctx)
+				c.collectWorkloadResourcesAndEvents(ctx)
 			case <-ctx.Done():
 				return
 			}
@@ -157,8 +162,8 @@ func (c *Collector) startWorkloadCollectionLoop(ctx context.Context) {
 	}()
 }
 
-func (c *Collector) collectWorkloadResources(ctx context.Context) {
-	for _, gvr := range WorkloadGVRs {
+func (c *Collector) collectWorkloadResourcesAndEvents(ctx context.Context) {
+	for _, gvr := range WorkloadAndEventGVRs {
 		klog.Infof("listing all resources for %v", gvr)
 		listResult, err := c.dynamicClient.Resource(gvr).List(ctx, metav1.ListOptions{})
 		if err != nil {

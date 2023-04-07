@@ -1,4 +1,4 @@
-package k8s
+package util
 
 import (
 	"fmt"
@@ -20,7 +20,7 @@ func runtimeObjecttoUnstructured(obj runtime.Object) (*unstructured.Unstructured
 }
 
 // runtimeObjecttoUnstructured converts the runtime object to unstructured
-func interfacetoUnstructured(obj interface{}) (*unstructured.Unstructured, error) {
+func InterfacetoUnstructured(obj interface{}) (*unstructured.Unstructured, error) {
 	runtimeObj, ok := obj.(runtime.Object)
 	if !ok {
 		return nil, fmt.Errorf("%s isn't a k8s runtime object", obj)
@@ -29,12 +29,30 @@ func interfacetoUnstructured(obj interface{}) (*unstructured.Unstructured, error
 }
 
 // hasStatusChanged checks whether the status has changed from oldObject to newObject
-func hasStatusChanged(oldObject *unstructured.Unstructured, newObject *unstructured.Unstructured) bool {
-	oldMap, inOld, err := unstructured.NestedMap(oldObject.Object, "status")
+func HasStatusChanged(oldObject *unstructured.Unstructured, newObject *unstructured.Unstructured) bool {
+	return hasFieldChanged(oldObject, newObject, "status")
+}
+
+func PruneData(object *unstructured.Unstructured) {
+	if IsConfigMapOrSecret(object) {
+		unstructured.RemoveNestedField(object.Object, "data")
+	}
+}
+
+func IsConfigMapOrSecret(object *unstructured.Unstructured) bool {
+	return object != nil && (object.GetKind() == "ConfigMap" || object.GetKind() == "Secret")
+}
+
+func HasDataChanged(oldObject, newObject *unstructured.Unstructured) bool {
+	return hasFieldChanged(oldObject, newObject, "data")
+}
+
+func hasFieldChanged(oldObject, newObject *unstructured.Unstructured, field string) bool {
+	oldMap, inOld, err := unstructured.NestedMap(oldObject.Object, field)
 	if err != nil {
 		return false
 	}
-	newMap, inNew, err := unstructured.NestedMap(newObject.Object, "status")
+	newMap, inNew, err := unstructured.NestedMap(newObject.Object, field)
 	if err != nil {
 		return false
 	}
