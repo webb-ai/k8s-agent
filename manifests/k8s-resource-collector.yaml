@@ -37,8 +37,11 @@ spec:
             - /app/data
           resources:
             requests:
-              memory: "512Mi"
-              cpu: "0.2"
+              memory: 300Mi
+              cpu: 100m
+            limits:
+              memory: 500Mi
+              cpu: 300m
 ---
 apiVersion: v1
 kind: ServiceAccount
