@@ -2,8 +2,9 @@ package k8s
 
 import (
 	"context"
-	"github.com/webb-ai/k8s-agent/pkg/util"
 	"time"
+
+	"github.com/webb-ai/k8s-agent/pkg/util"
 
 	"github.com/webb-ai/k8s-agent/pkg/api"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"

@@ -1,8 +1,9 @@
 package api
 
 import (
-	"github.com/webb-ai/k8s-agent/pkg/util"
 	"time"
+
+	"github.com/webb-ai/k8s-agent/pkg/util"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
