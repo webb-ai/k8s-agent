@@ -2,9 +2,7 @@
 
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
-The k8s resource collector is a tool that subscribes to changes in the Kubernetes API server for a specified set of resource types. It provides an easy way to collect and store the data related to these resources.
-
-## Supported Resource Types
+K8s resource collector subscribes to the changes in the K8s API server for a specified set of resource types. By default, it collects updates to the following resource types.
 
 - configMap
 - cronJob
@@ -28,14 +26,20 @@ The k8s resource collector is a tool that subscribes to changes in the Kubernete
 - ingress
 - networkPolicy
 
+For configmaps and secrets, the data field is deleted since it may contain sensitive information.
+
 ## Deploy to your cluster
 
 ```bash
-kubectl manifests/k8s-resource-collector.yaml
+kubectl apply -f manifests/k8s-resource-collector.yaml
 ```
 
 ## See staged data
 ```bash
-kubectl exec --stdin --tty <resource-collector-pod> -n webbai -- /bin/sh
+pod_name=$(kubectl get pods -n webbai | grep resource-collector | awk '{print $1}')
+kubectl exec --stdin --tty $pod_name -n webbai -- /bin/sh
 cd /app/data/
+cat k8s_resource.log
 ```
+
+Each row of `k8s_resource.log` is a json. 
