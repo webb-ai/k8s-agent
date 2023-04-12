@@ -49,18 +49,17 @@ func newRotateFileLogger(dir, fileName string, maxSizeMb, maxAge, maxBackups int
 func getWebbaiClient() api.Client {
 	clientId := os.Getenv("CLUSTER_ID")
 	clientSecret := os.Getenv("API_KEY")
-	apiUrl := os.Getenv("API_URL")
 
-	if apiUrl == "" || clientId == "" || clientSecret == "" {
+	if clientId == "" || clientSecret == "" {
 		return nil
 	}
 
 	return &http.WebbaiHttpClient{
 		ClientId:     clientId,
 		ClientSecret: clientSecret,
-		AuthUrl:      apiUrl + "/oauth/token",
-		ChangeUrl:    apiUrl + "/k8s_changes",
-		ResourceUrl:  apiUrl + "/k8s_resources",
+		AuthUrl:      "https://api.webb.ai/oauth/token",
+		ChangeUrl:    "https://api.webb.ai/k8s_changes",
+		ResourceUrl:  "https://api.webb.ai/k8s_resources",
 	}
 }
 
