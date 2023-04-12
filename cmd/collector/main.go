@@ -60,7 +60,7 @@ func getWebbaiClient() api.Client {
 		ClientSecret: clientSecret,
 		AuthUrl:      apiUrl + "/oauth/token",
 		ChangeUrl:    apiUrl + "/k8s_changes",
-		ResourceUrl:  "",
+		ResourceUrl:  apiUrl + "/k8s_resources",
 	}
 }
 
