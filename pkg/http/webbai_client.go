@@ -2,6 +2,7 @@ package http
 
 import (
 	"encoding/json"
+	"os"
 
 	"k8s.io/klog/v2"
 
@@ -17,6 +18,28 @@ type WebbaiHttpClient struct {
 	ChangeUrl    string
 	ResourceUrl  string
 	token        atomic.String
+}
+
+func NewWebbaiClient() api.Client {
+	clientId := os.Getenv("CLUSTER_ID")
+	clientSecret := os.Getenv("API_KEY")
+
+	if clientId == "" || clientSecret == "" {
+		return nil
+	}
+
+	client := &WebbaiHttpClient{
+		ClientId:     clientId,
+		ClientSecret: clientSecret,
+		AuthUrl:      "https://api.webb.ai/oauth/token",
+		ChangeUrl:    "https://api.webb.ai/k8s_changes",
+		ResourceUrl:  "https://api.webb.ai/k8s_resources",
+	}
+	err := client.obtainNewToken()
+	if err != nil {
+		return client
+	}
+	return nil
 }
 
 func (c *WebbaiHttpClient) SendK8sChangeEvent(event *api.ResourceChangeEvent) error {

@@ -7,7 +7,6 @@ import (
 	"path"
 	"time"
 
-	"github.com/webb-ai/k8s-agent/pkg/api"
 	"github.com/webb-ai/k8s-agent/pkg/http"
 
 	"github.com/rs/zerolog"
@@ -44,23 +43,6 @@ func newRotateFileLogger(dir, fileName string, maxSizeMb, maxAge, maxBackups int
 		Compress:   true,
 	}
 	return zerolog.New(writer).With().Timestamp().Logger()
-}
-
-func getWebbaiClient() api.Client {
-	clientId := os.Getenv("CLUSTER_ID")
-	clientSecret := os.Getenv("API_KEY")
-
-	if clientId == "" || clientSecret == "" {
-		return nil
-	}
-
-	return &http.WebbaiHttpClient{
-		ClientId:     clientId,
-		ClientSecret: clientSecret,
-		AuthUrl:      "https://api.webb.ai/oauth/token",
-		ChangeUrl:    "https://api.webb.ai/k8s_changes",
-		ResourceUrl:  "https://api.webb.ai/k8s_resources",
-	}
 }
 
 func main() {
@@ -110,7 +92,7 @@ func main() {
 	klog.Infof("creating resource collector")
 	dynamicClient := dynamic.NewForConfigOrDie(config)
 	logger := newRotateFileLogger(dataDir, "k8s_resource.log", 100, 28, 10)
-	collector := k8s.NewCollector(resyncPeriod, resyncPeriod*12, dynamicClient, logger, getWebbaiClient())
+	collector := k8s.NewCollector(resyncPeriod, resyncPeriod*12, dynamicClient, logger, http.NewWebbaiClient())
 
 	klog.Infof("adding resource collector to controller manager")
 	if err := controllerManager.Add(collector); err != nil {
