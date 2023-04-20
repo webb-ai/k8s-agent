@@ -26,6 +26,9 @@ func GetAccessToken(retryClient *retryablehttp.Client, tokenUrl, clientId, clien
 	requestString, _ := json.Marshal(requestBody)
 
 	response, err := retryClient.Post(tokenUrl, "application/json", requestString)
+	//nolint:staticcheck // SA5001 Ignore error here
+	defer response.Body.Close()
+
 	if err != nil {
 		return "", err
 	}

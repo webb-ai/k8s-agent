@@ -65,6 +65,8 @@ func (c *WebbaiHttpClient) sendRequest(url string, data interface{}) error {
 	}
 	client := retryablehttp.NewClient()
 	response, err := SendRequestWithToken(client, url, c.token.Load(), bytes)
+	//nolint:staticcheck // SA5001 Ignore error here
+	defer response.Body.Close()
 	if err != nil {
 		klog.Error(err)
 		return err
@@ -75,7 +77,9 @@ func (c *WebbaiHttpClient) sendRequest(url string, data interface{}) error {
 			klog.Error(err)
 			return err
 		}
-		_, err = SendRequestWithToken(client, url, c.token.Load(), bytes)
+		response, err = SendRequestWithToken(client, url, c.token.Load(), bytes)
+		//nolint:staticcheck // SA5001 Ignore error here
+		defer response.Body.Close()
 		return err
 	} else {
 		return nil
