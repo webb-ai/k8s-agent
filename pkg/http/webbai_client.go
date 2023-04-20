@@ -21,7 +21,7 @@ type WebbaiHttpClient struct {
 }
 
 func NewWebbaiClient() api.Client {
-	clientId := os.Getenv("CLUSTER_ID")
+	clientId := os.Getenv("CLIENT_ID")
 	clientSecret := os.Getenv("API_KEY")
 
 	if clientId == "" || clientSecret == "" {

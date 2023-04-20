@@ -31,6 +31,11 @@ spec:
         - image: public.ecr.aws/p5v6t9h8/k8s-resource-collector:v0.2-7-g46f90de
           imagePullPolicy: Always
           name: resource-collector
+          env:
+            - name: CLIENT_ID
+              value: ""
+            - name: API_KEY
+              value: ""
           command:
             - /app/collector
             - --data-dir

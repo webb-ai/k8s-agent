@@ -7,6 +7,8 @@ import (
 	"path"
 	"time"
 
+	"github.com/webb-ai/k8s-agent/pkg/api"
+
 	"github.com/webb-ai/k8s-agent/pkg/http"
 
 	"github.com/rs/zerolog"
@@ -27,11 +29,12 @@ var (
 
 var (
 	// TODO: make this configurable
-	qps            float32 = 20.0
-	burst                  = 30
-	resyncPeriod           = time.Second * 10
-	metricsAddress         = ":9090"
-	dataDir                = "/app/data/"
+	qps                float32 = 20.0
+	burst                      = 30
+	resyncPeriod               = time.Second * 10
+	collectionInterval         = time.Minute * 5
+	metricsAddress             = ":9090"
+	dataDir                    = "/app/data/"
 )
 
 func newRotateFileLogger(dir, fileName string, maxSizeMb, maxAge, maxBackups int) zerolog.Logger {
@@ -43,6 +46,14 @@ func newRotateFileLogger(dir, fileName string, maxSizeMb, maxAge, maxBackups int
 		Compress:   true,
 	}
 	return zerolog.New(writer).With().Timestamp().Logger()
+}
+
+func NewClient() api.Client {
+	client := http.NewWebbaiClient()
+	if client == nil {
+		return &api.NoOpClient{}
+	}
+	return client
 }
 
 func main() {
@@ -92,7 +103,7 @@ func main() {
 	klog.Infof("creating resource collector")
 	dynamicClient := dynamic.NewForConfigOrDie(config)
 	logger := newRotateFileLogger(dataDir, "k8s_resource.log", 100, 28, 10)
-	collector := k8s.NewCollector(resyncPeriod, resyncPeriod*12, dynamicClient, logger, http.NewWebbaiClient())
+	collector := k8s.NewCollector(resyncPeriod, collectionInterval, dynamicClient, logger, NewClient())
 
 	klog.Infof("adding resource collector to controller manager")
 	if err := controllerManager.Add(collector); err != nil {
