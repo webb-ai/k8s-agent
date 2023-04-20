@@ -34,6 +34,17 @@ For configmaps and secrets, the data field is deleted since it may contain sensi
 kubectl apply -f manifests/k8s-resource-collector.yaml
 ```
 
+## Uninstall
+
+```bash
+kubectl delete -f manifests/k8s-resource-collector.yaml
+```
+
+## Stream to webb.ai
+
+You will need to edit the `CLIENT_ID` and `API_KEY` env var in manifests/k8s-resource-collector.yaml to stream the data to webb.ai.
+Reach out to us to get a CLIENT_ID and API_KEY.
+
 ## See staged data
 ```bash
 pod_name=$(kubectl get pods -n webbai | grep resource-collector | awk '{print $1}')
