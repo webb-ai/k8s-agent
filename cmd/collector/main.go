@@ -51,6 +51,7 @@ func newRotateFileLogger(dir, fileName string, maxSizeMb, maxAge, maxBackups int
 func NewClient() api.Client {
 	client := http.NewWebbaiClient()
 	if client == nil {
+		klog.Warningf("cannot initialize webb.ai http client. Will not stream data to webb.ai")
 		return &api.NoOpClient{}
 	}
 	return client

@@ -37,24 +37,20 @@ func NewWebbaiClient() api.Client {
 	}
 	err := client.obtainNewToken()
 	if err != nil {
+		klog.Error(err)
 		return client
 	}
+
 	return nil
 }
 
 func (c *WebbaiHttpClient) SendK8sChangeEvent(event *api.ResourceChangeEvent) error {
-	if c.ChangeUrl != "" {
-		klog.Infof("sending k8s change event to %s", c.ChangeUrl)
-		return c.sendRequest(c.ChangeUrl, event)
-	}
-	return nil
+	klog.Infof("sending k8s change event to %s", c.ChangeUrl)
+	return c.sendRequest(c.ChangeUrl, event)
 }
 func (c *WebbaiHttpClient) SendK8sResources(list *api.ResourceList) error {
-	if c.ResourceUrl != "" {
-		klog.Infof("sending k8s resource list to %s", c.ResourceUrl)
-		return c.sendRequest(c.ResourceUrl, list)
-	}
-	return nil
+	klog.Infof("sending k8s resource list to %s", c.ResourceUrl)
+	return c.sendRequest(c.ResourceUrl, list)
 }
 
 func (c *WebbaiHttpClient) sendRequest(url string, data interface{}) error {
@@ -90,11 +86,11 @@ func (c *WebbaiHttpClient) obtainNewToken() error {
 	klog.Infof("request a new token from %s", c.AuthUrl)
 	client := retryablehttp.NewClient()
 	token, err := GetAccessToken(client, c.AuthUrl, c.ClientId, c.ClientSecret, c.ClientId)
-	klog.Infof("got access token")
 	if err != nil {
 		klog.Error(err)
 		return err
 	}
+	klog.Infof("got access token")
 	c.token.Store(token)
 	return nil
 }
