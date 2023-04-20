@@ -103,7 +103,7 @@ func (c *Collector) OnUpdate(oldObj, newObj interface{}) {
 
 	if oldObject.GetResourceVersion() != newObject.GetResourceVersion() || util.HasStatusChanged(oldObject, newObject) {
 		klog.Infof("detected resource version change or status change of %s/%s(%s)",
-			newObject.GetNamespace(), newObject.GetName(), newObject.GetObjectKind())
+			newObject.GetNamespace(), newObject.GetName(), newObject.GroupVersionKind())
 		event := api.NewResourceChangeEvent(oldObject, newObject)
 		c.logger.Info().Any("payload", event).Msg("object_update")
 
