@@ -38,10 +38,10 @@ func NewWebbaiClient() api.Client {
 	err := client.obtainNewToken()
 	if err != nil {
 		klog.Error(err)
-		return client
+		return nil
 	}
 
-	return nil
+	return client
 }
 
 func (c *WebbaiHttpClient) SendK8sChangeEvent(event *api.ResourceChangeEvent) error {
