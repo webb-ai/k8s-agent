@@ -151,6 +151,7 @@ func (c *Collector) startWorkloadCollectionLoop(ctx context.Context) {
 	klog.Infof("starting to collect workload resources every %v", c.resourceCollectionInterval)
 
 	go func() {
+		c.collectWorkloadResourcesAndEvents(ctx)
 		for {
 			select {
 			case <-time.After(c.resourceCollectionInterval):

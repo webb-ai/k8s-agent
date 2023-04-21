@@ -61,12 +61,12 @@ func (c *WebbaiHttpClient) sendRequest(url string, data interface{}) error {
 	}
 	client := retryablehttp.NewClient()
 	response, err := SendRequestWithToken(client, url, c.token.Load(), bytes)
-	//nolint:staticcheck // SA5001 Ignore error here
-	defer response.Body.Close()
 	if err != nil {
 		klog.Error(err)
 		return err
 	}
+	//nolint:staticcheck // SA5001 Ignore error here
+	defer response.Body.Close()
 	if response.StatusCode == 401 { // Unauthorized, obtain new token and try again
 		err = c.obtainNewToken()
 		if err != nil {
@@ -74,8 +74,10 @@ func (c *WebbaiHttpClient) sendRequest(url string, data interface{}) error {
 			return err
 		}
 		response, err = SendRequestWithToken(client, url, c.token.Load(), bytes)
-		//nolint:staticcheck // SA5001 Ignore error here
-		defer response.Body.Close()
+		if response != nil {
+			//nolint:staticcheck // SA5001 Ignore error here
+			defer response.Body.Close()
+		}
 		return err
 	} else {
 		return nil
