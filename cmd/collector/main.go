@@ -7,6 +7,8 @@ import (
 	"path"
 	"time"
 
+	"sigs.k8s.io/controller-runtime/pkg/healthz"
+
 	"github.com/webb-ai/k8s-agent/pkg/api"
 
 	"github.com/webb-ai/k8s-agent/pkg/http"
@@ -34,6 +36,7 @@ var (
 	resyncPeriod       = time.Second * 10
 	collectionInterval = time.Minute * 5
 	metricsAddress     = ":9090"
+	healthProbeAddress = ":9091"
 	dataDir            = "/app/data/"
 )
 
@@ -93,7 +96,7 @@ func main() {
 
 	klog.Infof("creating controller manager")
 	controllerManager, err := controllerruntime.NewManager(config, controllerruntime.Options{
-		LivenessEndpointName:          "/healthz",
+		HealthProbeBindAddress:        healthProbeAddress,
 		MetricsBindAddress:            metricsAddress,
 		LeaderElection:                true,
 		LeaderElectionID:              "webb-ai.k8s-resource-collector",
@@ -102,6 +105,10 @@ func main() {
 	})
 	if err != nil {
 		klog.Fatal(err)
+	}
+
+	if err := controllerManager.AddHealthzCheck("ping", healthz.Ping); err != nil {
+		klog.Fatalf("Failed to add health check endpoint: %v", err)
 	}
 
 	klog.Infof("creating resource collector")
