@@ -32,7 +32,7 @@ spec:
         runAsUser: 10000
         runAsGroup: 10000
       containers:
-        - image: public.ecr.aws/p5v6t9h8/k8s-resource-collector:v0.3-9-g2c703b5
+        - image: public.ecr.aws/p5v6t9h8/k8s-resource-collector:v0.3-10-g2cf7acc
           imagePullPolicy: Always
           name: resource-collector
           env:
