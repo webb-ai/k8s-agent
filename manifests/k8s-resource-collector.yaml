@@ -38,15 +38,19 @@ spec:
               value: ""
           command:
             - /app/collector
-            - --data-dir
+            - --data-dir # directory to store staged data
             - /app/data
+            - --kube-api-qps # max qps from this client to kube api server
+            - "20"
+            - --kube-api-burst # max burst for throttle from this client to kube api server
+            - "30"
           resources:
             requests:
-              memory: 300Mi
+              memory: 1000Mi
               cpu: 100m
             limits:
-              memory: 500Mi
-              cpu: 300m
+              memory: 2000Mi
+              cpu: 200m
 ---
 apiVersion: v1
 kind: ServiceAccount

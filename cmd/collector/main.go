@@ -29,12 +29,12 @@ var (
 
 var (
 	// TODO: make this configurable
-	qps                float32 = 20.0
-	burst                      = 30
-	resyncPeriod               = time.Second * 10
-	collectionInterval         = time.Minute * 5
-	metricsAddress             = ":9090"
-	dataDir                    = "/app/data/"
+	qps                = 20.0
+	burst              = 30
+	resyncPeriod       = time.Second * 10
+	collectionInterval = time.Minute * 5
+	metricsAddress     = ":9090"
+	dataDir            = "/app/data/"
 )
 
 func newRotateFileLogger(dir, fileName string, maxSizeMb, maxAge, maxBackups int) zerolog.Logger {
@@ -61,6 +61,9 @@ func main() {
 	var version bool
 	flag.BoolVar(&version, "version", false, "show version")
 	flag.StringVar(&dataDir, "data-dir", dataDir, "directory to store staged data")
+	flag.Float64Var(&qps, "kube-api-qps", qps, "max qps from this client to kube api server, default 20")
+	flag.IntVar(&burst, "kube-api-burst", burst, "max burst for throttle from this client to kube api server, default 30")
+
 	flag.Parse()
 
 	if version {
@@ -85,7 +88,7 @@ func main() {
 	if err != nil {
 		klog.Fatal(err)
 	}
-	config.QPS = qps
+	config.QPS = float32(qps)
 	config.Burst = burst
 
 	klog.Infof("creating controller manager")
