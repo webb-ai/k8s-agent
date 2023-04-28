@@ -23,8 +23,6 @@ FROM ${RUNTIME_IMAGE} as base
 WORKDIR /app
 
 RUN apk add --no-cache ca-certificates && update-ca-certificates
-RUN adduser -D webbai -u 10000
-USER webbai
 
 COPY --from=go-builder ["/build/collector", "."]
 
