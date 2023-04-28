@@ -27,6 +27,10 @@ spec:
         app: resource-collector
     spec:
       serviceAccountName: resource-collector
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10000
+        runAsGroup: 10000
       containers:
         - image: public.ecr.aws/p5v6t9h8/k8s-resource-collector:v0.3-7-gd8a3f95
           imagePullPolicy: Always
