@@ -31,13 +31,13 @@ var (
 
 var (
 	// TODO: make this configurable
-	qps                = 20.0
-	burst              = 30
-	resyncPeriod       = time.Second * 10
-	collectionInterval = time.Minute * 5
-	metricsAddress     = ":9090"
-	healthProbeAddress = ":9091"
-	dataDir            = "/app/data/"
+	qps                     = 20.0
+	burst                   = 30
+	resyncPeriod            = time.Second * 10
+	eventCollectionInterval = time.Minute * 5
+	metricsAddress          = ":9090"
+	healthProbeAddress      = ":9091"
+	dataDir                 = "/app/data/"
 )
 
 func newRotateFileLogger(dir, fileName string, maxSizeMb, maxAge, maxBackups int) zerolog.Logger {
@@ -66,6 +66,7 @@ func main() {
 	flag.StringVar(&dataDir, "data-dir", dataDir, "directory to store staged data")
 	flag.Float64Var(&qps, "kube-api-qps", qps, "max qps from this client to kube api server, default 20")
 	flag.IntVar(&burst, "kube-api-burst", burst, "max burst for throttle from this client to kube api server, default 30")
+	flag.DurationVar(&eventCollectionInterval, "event-collect-interval", eventCollectionInterval, "interval to collect events")
 
 	flag.Parse()
 
@@ -114,7 +115,7 @@ func main() {
 	klog.Infof("creating resource collector")
 	dynamicClient := dynamic.NewForConfigOrDie(config)
 	logger := newRotateFileLogger(dataDir, "k8s_resource.log", 100, 28, 10)
-	collector := k8s.NewCollector(resyncPeriod, collectionInterval, dynamicClient, logger, NewClient())
+	collector := k8s.NewCollector(resyncPeriod, eventCollectionInterval, dynamicClient, logger, NewClient())
 
 	klog.Infof("adding resource collector to controller manager")
 	if err := controllerManager.Add(collector); err != nil {

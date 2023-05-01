@@ -3,6 +3,8 @@ package api
 import (
 	"time"
 
+	"k8s.io/apimachinery/pkg/runtime"
+
 	"github.com/webb-ai/k8s-agent/pkg/util"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -43,11 +45,11 @@ func NewResourceChangeEvent(oldObj, newObj *unstructured.Unstructured) *Resource
 }
 
 type ResourceList struct {
-	Objects []unstructured.Unstructured `json:"objects"`
-	Time    int64                       `json:"time"`
+	Objects []runtime.Object `json:"objects"`
+	Time    int64            `json:"time"`
 }
 
-func NewResourceList(objects []unstructured.Unstructured) *ResourceList {
+func NewResourceList(objects []runtime.Object) *ResourceList {
 	return &ResourceList{
 		Objects: objects,
 		Time:    time.Now().Unix(),
