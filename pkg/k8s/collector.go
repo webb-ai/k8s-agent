@@ -55,7 +55,7 @@ func (c *Collector) noOpUpdate(oldObj, newObj interface{}) {
 
 func (c *Collector) OnAdd(obj interface{}) {
 	// TODO: retry on retryable errors
-	runtimeObject, err := util.InterfacetoUnstructured(obj)
+	runtimeObject, err := util.InterfaceToUnstructured(obj)
 	if err != nil {
 		klog.Error(err)
 		return
@@ -75,7 +75,7 @@ func (c *Collector) OnAdd(obj interface{}) {
 }
 
 func (c *Collector) OnDelete(obj interface{}) {
-	runtimeObject, err := util.InterfacetoUnstructured(obj)
+	runtimeObject, err := util.InterfaceToUnstructured(obj)
 	if err != nil {
 		klog.Error(err)
 		return
@@ -94,13 +94,13 @@ func (c *Collector) OnDelete(obj interface{}) {
 }
 
 func (c *Collector) OnUpdate(oldObj, newObj interface{}) {
-	oldObject, err := util.InterfacetoUnstructured(oldObj)
+	oldObject, err := util.InterfaceToUnstructured(oldObj)
 	if err != nil {
 		klog.Error(err)
 		return
 	}
 
-	newObject, err := util.InterfacetoUnstructured(newObj)
+	newObject, err := util.InterfaceToUnstructured(newObj)
 	if err != nil {
 		klog.Error(err)
 		return

@@ -20,7 +20,7 @@ func runtimeObjecttoUnstructured(obj runtime.Object) (*unstructured.Unstructured
 }
 
 // runtimeObjecttoUnstructured converts the runtime object to unstructured
-func InterfacetoUnstructured(obj interface{}) (*unstructured.Unstructured, error) {
+func InterfaceToUnstructured(obj interface{}) (*unstructured.Unstructured, error) {
 	runtimeObj, ok := obj.(runtime.Object)
 	if !ok {
 		return nil, fmt.Errorf("%s isn't a k8s runtime object", obj)
@@ -37,6 +37,8 @@ func PruneData(object *unstructured.Unstructured) {
 	if IsConfigMapOrSecret(object) {
 		unstructured.RemoveNestedField(object.Object, "data")
 	}
+
+	unstructured.RemoveNestedField(object.Object, "metadata", "managedFields")
 }
 
 func IsConfigMapOrSecret(object *unstructured.Unstructured) bool {
