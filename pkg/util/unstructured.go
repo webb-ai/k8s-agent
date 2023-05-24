@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"reflect"
 
+	corev1 "k8s.io/api/core/v1"
+
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 )
@@ -17,6 +19,17 @@ func runtimeObjecttoUnstructured(obj runtime.Object) (*unstructured.Unstructured
 	}
 
 	return &unstructured.Unstructured{Object: unstructuredObj}, nil
+}
+
+// UnstructuredToPod converts the unstructured content to Pod
+func UnstructuredToPod(unstr *unstructured.Unstructured) (*corev1.Pod, error) {
+	var pod corev1.Pod
+
+	err := runtime.DefaultUnstructuredConverter.FromUnstructured(unstr.UnstructuredContent(), &pod)
+	if err != nil {
+		return nil, err
+	}
+	return &pod, nil
 }
 
 // runtimeObjecttoUnstructured converts the runtime object to unstructured
@@ -37,8 +50,6 @@ func PruneData(object *unstructured.Unstructured) {
 	if IsConfigMapOrSecret(object) {
 		unstructured.RemoveNestedField(object.Object, "data")
 	}
-
-	unstructured.RemoveNestedField(object.Object, "metadata", "managedFields")
 }
 
 func IsConfigMapOrSecret(object *unstructured.Unstructured) bool {

@@ -1,8 +1,16 @@
 package http
 
 import (
+	"bytes"
 	"encoding/json"
+	"fmt"
+	"io"
 	"os"
+
+	//nolint:staticcheck // Ignore error here
+	"github.com/golang/protobuf/proto"
+	"github.com/golang/snappy"
+	"github.com/prometheus/prometheus/prompb"
 
 	"k8s.io/klog/v2"
 
@@ -17,6 +25,7 @@ type WebbaiHttpClient struct {
 	AuthUrl      string
 	ChangeUrl    string
 	ResourceUrl  string
+	MetricsUrl   string
 	token        atomic.String
 }
 
@@ -34,6 +43,7 @@ func NewWebbaiClient() api.Client {
 		AuthUrl:      "https://api.webb.ai/oauth/token",
 		ChangeUrl:    "https://api.webb.ai/k8s_changes",
 		ResourceUrl:  "https://api.webb.ai/k8s_resources",
+		MetricsUrl:   "https://api.webb.ai/metrics/write",
 	}
 	err := client.obtainNewToken()
 	if err != nil {
@@ -51,6 +61,50 @@ func (c *WebbaiHttpClient) SendK8sChangeEvent(event *api.ResourceChangeEvent) er
 func (c *WebbaiHttpClient) SendK8sResources(list *api.ResourceList) error {
 	klog.Infof("sending k8s resource list to %s", c.ResourceUrl)
 	return c.sendRequest(c.ResourceUrl, list)
+}
+
+func (c *WebbaiHttpClient) SendTrafficMetrics(request *prompb.WriteRequest) error {
+	data, err := proto.Marshal(request)
+	if err != nil {
+		return fmt.Errorf("failed to marshal write request: %V", err)
+	}
+
+	// Compress the serialized data using snappy
+	compressed := snappy.Encode(nil, data)
+	body := bytes.NewReader(compressed)
+
+	req, err := retryablehttp.NewRequest("POST", c.MetricsUrl, body)
+	if err != nil {
+		return fmt.Errorf("failed to create post request to %s", c.MetricsUrl)
+	}
+
+	req.Header.Set("Content-Type", "application/x-protobuf")
+	req.Header.Set("Content-Encoding", "snappy")
+	req.Header.Set("Authorization", "Bearer "+c.token.Load())
+
+	client := retryablehttp.NewClient()
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return fmt.Errorf("failed to post to %s", c.MetricsUrl)
+	}
+	if resp != nil {
+		//nolint:staticcheck // SA5001 Ignore error here
+		defer resp.Body.Close()
+	}
+
+	respBody, err := io.ReadAll(resp.Body)
+
+	if err != nil {
+		return fmt.Errorf("failed to read response body: %s", err)
+	}
+
+	if resp.StatusCode != 200 {
+		return fmt.Errorf("failed to post to %s. Error code: %d. Body: %s", c.MetricsUrl, resp.StatusCode, string(respBody))
+	}
+
+	klog.Infof("Successfully send traffic metrics")
+	return nil
 }
 
 func (c *WebbaiHttpClient) sendRequest(url string, data interface{}) error {
