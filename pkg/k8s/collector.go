@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"time"
 
+	corev1 "k8s.io/api/core/v1"
+
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/webb-ai/k8s-agent/pkg/traffic"
@@ -221,10 +223,12 @@ func (c *Collector) startTrafficMetricsCollectionLoop(ctx context.Context) {
 
 	if c.trafficCollectorPodSelector != nil {
 		klog.Infof("starting to collect traffic metrics every %v for pods with labels %v", c.trafficMetricsCollectionInterval, c.trafficCollectorPodSelector)
+		c.setTrafficCollectorTargetPods()
 		go func() {
 			for {
 				select {
 				case <-time.After(c.eventCollectionInterval):
+					c.setTrafficCollectorTargetPods()
 					c.collectTrafficMetrics()
 				case <-ctx.Done():
 					return
@@ -240,6 +244,7 @@ func (c *Collector) collectTrafficMetrics() {
 
 	if err != nil {
 		klog.Error(err)
+		return
 	}
 
 	if len(pods) == 0 {
@@ -254,12 +259,13 @@ func (c *Collector) collectTrafficMetrics() {
 			continue
 		}
 		podIp := pod.Status.PodIP
-		target := fmt.Sprintf("http://%s:9090/webbai_metrics", podIp)
-		klog.Infof("scraping %s for prometheus metrics", target)
-		metricFamilies, err := traffic.ScrapeTarget(target)
+		metricsUrl := fmt.Sprintf("http://%s:8897/webbai_metrics", podIp)
+		klog.Infof("scraping %s for prometheus metrics", metricsUrl)
+		metricFamilies, err := traffic.ScrapeTarget(metricsUrl)
 		if err != nil {
 			klog.Error(err)
 		}
+
 		c.trafficLogger.Info().Any("payload", metricFamilies).Msg("metrics")
 		writeRequest := traffic.MetricFamiliesToProtoWriteRequest(metricFamilies)
 		err = c.client.SendTrafficMetrics(writeRequest)
@@ -269,12 +275,37 @@ func (c *Collector) collectTrafficMetrics() {
 	}
 }
 
-//
-//func (c *Collector) printLabels(metricFamilies map[string]*dto.MetricFamily) {
-//	for _, family := range metricFamilies {
-//		for _, metric := range family.GetMetric() {
-//			metricLabels := traffic.ExtractLabels(metric)
-//			klog.Infof("%v", metricLabels)
-//		}
-//	}
-//}
+func (c *Collector) setTrafficCollectorTargetPods() {
+	var allRunningPods []corev1.Pod
+	var trafficCollectorPods []corev1.Pod
+	pods, err := c.informerFactory.ForResource(podGVR).Lister().List(labels.Everything())
+	if err != nil {
+		klog.Error(err)
+		return
+	}
+
+	for _, podRuntimeObject := range pods {
+		pod, err := util.UnstructuredToPod(podRuntimeObject.(*unstructured.Unstructured))
+		if err != nil {
+			klog.Error(err)
+			continue
+		}
+		if pod.Status.Phase == corev1.PodRunning && !c.trafficCollectorPodSelector.Matches(labels.Set(pod.Labels)) {
+			klog.Infof("targeting pod %s from namespace %s", pod.Name, pod.Namespace)
+			allRunningPods = append(allRunningPods, *pod)
+		}
+		if pod.Status.Phase == corev1.PodRunning && c.trafficCollectorPodSelector.Matches(labels.Set(pod.Labels)) {
+			trafficCollectorPods = append(trafficCollectorPods, *pod)
+		}
+	}
+
+	for _, pod := range trafficCollectorPods {
+		podIp := pod.Status.PodIP
+		podTargetsUrl := fmt.Sprintf("http://%s:8897/pods/set-targeted", podIp)
+		klog.Infof("setting pod targets to %s", podTargetsUrl)
+		err = traffic.SetPodTargets(allRunningPods, podTargetsUrl)
+		if err != nil {
+			klog.Error(err)
+		}
+	}
+}

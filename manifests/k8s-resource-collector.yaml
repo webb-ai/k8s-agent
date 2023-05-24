@@ -26,9 +26,9 @@ spec:
       labels:
         app: resource-collector
     spec:
-      serviceAccountName: resource-collector
+      serviceAccountName: webbai
       containers:
-        - image: public.ecr.aws/p5v6t9h8/k8s-resource-collector:v0.3-15-g1d2de1a-dirty
+        - image: public.ecr.aws/p5v6t9h8/k8s-resource-collector:v0.3-17-g5d34a0f
           imagePullPolicy: Always
           name: resource-collector
           env:
@@ -94,3 +94,130 @@ subjects:
   - kind: ServiceAccount
     name: webbai
     namespace: webbai
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  labels:
+    app: traffic-collector
+  name: traffic-collector
+  namespace: webbai
+spec:
+  selector:
+    matchLabels:
+      app: traffic-collector
+  template:
+    metadata:
+      labels:
+        app: traffic-collector
+      name: traffic-collector
+      namespace: webbai
+    spec:
+      containers:
+        - command:
+            - ./worker
+            - -i
+            - any
+            - -port
+            - "8897"
+            - -packet-capture
+            - libpcap
+            - -servicemesh
+            - -tls
+            - -procfs
+            - /hostproc
+          image: public.ecr.aws/p5v6t9h8/k8s-traffic-collector:latest
+          imagePullPolicy: Always
+          name: traffic-collector
+          env:
+            - name: GOGC
+              value: '50'
+          ports:
+            - containerPort: 8897
+              hostPort: 8897
+          resources:
+            limits:
+              cpu: '750m'
+              memory: '1Gi'
+            requests:
+              cpu: '100m'
+              memory: '200Mi'
+          securityContext:
+            capabilities:
+              add:
+                - NET_RAW
+                - NET_ADMIN
+                - SYS_ADMIN
+                - SYS_PTRACE
+                - DAC_OVERRIDE
+                - SYS_RESOURCE
+              drop:
+                - ALL
+          volumeMounts:
+            - mountPath: /hostproc
+              name: proc
+              readOnly: true
+            - mountPath: /sys
+              name: sys
+              readOnly: true
+      dnsPolicy: ClusterFirstWithHostNet
+      hostNetwork: true
+      serviceAccountName: webbai
+      terminationGracePeriodSeconds: 0
+      tolerations:
+        - effect: NoExecute
+          operator: Exists
+        - effect: NoSchedule
+          operator: Exists
+      volumes:
+        - hostPath:
+            path: /proc
+          name: proc
+        - hostPath:
+            path: /sys
+          name: sys
+#---
+#apiVersion: apps/v1
+#kind: Deployment
+#metadata:
+#  namespace: webbai
+#  name: kubeshark-hub
+#  labels:
+#    app: kubeshark-hub
+#spec:
+#  replicas: 1
+#  selector:
+#    matchLabels:
+#      app: kubeshark-hub
+#  template:
+#    metadata:
+#      labels:
+#        app: kubeshark-hub
+#    spec:
+#      serviceAccountName: webbai
+#      containers:
+#        - name: kubeshark-hub
+#          command:
+#            - ./hub
+#          env:
+#            - name: POD_REGEX
+#              value: ".*"
+#            - name: NAMESPACES
+#              value: ""
+#            - name: LICENSE
+#              value: ""
+#            - name: SCRIPTING_ENV
+#              value: "{}"
+#            - name: SCRIPTING_SCRIPTS
+#              value: "[]"
+#          image: docker.io/kubeshark/hub:v0.8.2
+#          imagePullPolicy: Always
+#          resources:
+#            limits:
+#              cpu: "750m"
+#              memory: "1Gi"
+#            requests:
+#              cpu: "100m"
+#              memory: "200Mi"
+#      dnsPolicy: ClusterFirstWithHostNet
+#      terminationGracePeriodSeconds: 0
