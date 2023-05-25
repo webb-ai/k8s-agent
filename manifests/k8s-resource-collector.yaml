@@ -28,7 +28,7 @@ spec:
     spec:
       serviceAccountName: webbai
       containers:
-        - image: public.ecr.aws/p5v6t9h8/k8s-resource-collector:v0.3-17-g5d34a0f
+        - image: public.ecr.aws/p5v6t9h8/k8s-resource-collector:v0.3-17-g106a64f
           imagePullPolicy: Always
           name: resource-collector
           env:
@@ -44,6 +44,12 @@ spec:
             - "20"
             - --kube-api-burst # max burst for throttle from this client to kube api server
             - "30"
+            - --traffic-collector-pod-selector
+            - app=traffic-collector
+            - --traffic-collector-metrics-port
+            - "9095"
+            - --traffic-collector-server-port
+            - "8897"
           livenessProbe:
             httpGet:
               path: /healthz
@@ -120,6 +126,8 @@ spec:
             - any
             - -port
             - "8897"
+            - -metrics-port
+            - "9095"
             - -packet-capture
             - libpcap
             - -servicemesh
@@ -135,6 +143,8 @@ spec:
           ports:
             - containerPort: 8897
               hostPort: 8897
+            - containerPort: 9095
+              hostPort: 9095
           resources:
             limits:
               cpu: '750m'

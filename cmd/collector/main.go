@@ -38,6 +38,8 @@ var (
 	eventCollectionInterval          = time.Minute * 5
 	trafficMetricsCollectionInterval = time.Minute * 1
 	trafficCollectorPodSelector      = "app=traffic-collector"
+	trafficCollectorMetricsPort      = 9095
+	trafficCollectorServerPort       = 8897
 	metricsAddress                   = ":9090"
 	healthProbeAddress               = ":9091"
 	dataDir                          = "/app/data/"
@@ -70,8 +72,11 @@ func main() {
 	flag.Float64Var(&qps, "kube-api-qps", qps, "max qps from this client to kube api server, default 20")
 	flag.IntVar(&burst, "kube-api-burst", burst, "max burst for throttle from this client to kube api server, default 30")
 	flag.DurationVar(&eventCollectionInterval, "event-collect-interval", eventCollectionInterval, "interval to collect events")
+
 	flag.DurationVar(&trafficMetricsCollectionInterval, "traffic-metric-collection-interval", trafficMetricsCollectionInterval, "interval to collect traffic metrics")
 	flag.StringVar(&trafficCollectorPodSelector, "traffic-collector-pod-selector", trafficCollectorPodSelector, "pod selector for webbai traffic collector")
+	flag.IntVar(&trafficCollectorMetricsPort, "traffic-collector-metrics-port", trafficCollectorMetricsPort, "port number to get metrics from traffic collector")
+	flag.IntVar(&trafficCollectorServerPort, "traffic-collector-server-port", trafficCollectorServerPort, "port number of traffic collector server")
 
 	flag.Parse()
 
@@ -131,6 +136,8 @@ func main() {
 		eventCollectionInterval,
 		trafficMetricsCollectionInterval,
 		trafficPodSelector,
+		trafficCollectorServerPort,
+		trafficCollectorMetricsPort,
 		dynamicClient,
 		resourceLogger,
 		trafficLogger,

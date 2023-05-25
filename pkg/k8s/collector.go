@@ -30,6 +30,8 @@ type Collector struct {
 	eventCollectionInterval          time.Duration
 	trafficMetricsCollectionInterval time.Duration
 	trafficCollectorPodSelector      labels.Selector
+	trafficCollectorServerPort       int
+	trafficCollectorMetricsPort      int
 	dynamicClient                    dynamic.Interface
 	resourceLogger                   zerolog.Logger
 	trafficLogger                    zerolog.Logger
@@ -43,6 +45,8 @@ func NewCollector(
 	eventCollectionInterval,
 	trafficMetricsCollectionInterval time.Duration,
 	trafficCollectorPodSelector labels.Selector,
+	trafficCollectorServerPort int,
+	trafficCollectorMetricsPort int,
 	dynamicClient dynamic.Interface,
 	resourceLogger zerolog.Logger,
 	trafficLogger zerolog.Logger,
@@ -53,6 +57,8 @@ func NewCollector(
 		eventCollectionInterval:          eventCollectionInterval,
 		trafficMetricsCollectionInterval: trafficMetricsCollectionInterval,
 		trafficCollectorPodSelector:      trafficCollectorPodSelector,
+		trafficCollectorServerPort:       trafficCollectorServerPort,
+		trafficCollectorMetricsPort:      trafficCollectorMetricsPort,
 		dynamicClient:                    dynamicClient,
 		resourceLogger:                   resourceLogger,
 		trafficLogger:                    trafficLogger,
@@ -259,7 +265,7 @@ func (c *Collector) collectTrafficMetrics() {
 			continue
 		}
 		podIp := pod.Status.PodIP
-		metricsUrl := fmt.Sprintf("http://%s:8897/webbai_metrics", podIp)
+		metricsUrl := fmt.Sprintf("http://%s:%d/webbai_metrics", podIp, c.trafficCollectorMetricsPort)
 		klog.Infof("scraping %s for prometheus metrics", metricsUrl)
 		metricFamilies, err := traffic.ScrapeTarget(metricsUrl)
 		if err != nil {
@@ -301,7 +307,7 @@ func (c *Collector) setTrafficCollectorTargetPods() {
 
 	for _, pod := range trafficCollectorPods {
 		podIp := pod.Status.PodIP
-		podTargetsUrl := fmt.Sprintf("http://%s:8897/pods/set-targeted", podIp)
+		podTargetsUrl := fmt.Sprintf("http://%s:%d/pods/set-targeted", podIp, c.trafficCollectorServerPort)
 		klog.Infof("setting pod targets to %s", podTargetsUrl)
 		err = traffic.SetPodTargets(allRunningPods, podTargetsUrl)
 		if err != nil {
