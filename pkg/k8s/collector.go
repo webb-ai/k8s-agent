@@ -233,7 +233,7 @@ func (c *Collector) startTrafficMetricsCollectionLoop(ctx context.Context) {
 		go func() {
 			for {
 				select {
-				case <-time.After(c.eventCollectionInterval):
+				case <-time.After(c.trafficMetricsCollectionInterval):
 					c.setTrafficCollectorTargetPods()
 					c.collectTrafficMetrics()
 				case <-ctx.Done():
@@ -267,12 +267,12 @@ func (c *Collector) collectTrafficMetrics() {
 		podIp := pod.Status.PodIP
 		metricsUrl := fmt.Sprintf("http://%s:%d/webbai_metrics", podIp, c.trafficCollectorMetricsPort)
 		klog.Infof("scraping %s for prometheus metrics", metricsUrl)
-		metricFamilies, err := traffic.ScrapeTarget(metricsUrl)
+		metricText, metricFamilies, err := traffic.ScrapeTarget(metricsUrl)
 		if err != nil {
 			klog.Error(err)
 		}
 
-		c.trafficLogger.Info().Any("payload", metricFamilies).Msg("metrics")
+		c.trafficLogger.Info().Any("payload", metricText).Msg("metrics")
 		writeRequest := traffic.MetricFamiliesToProtoWriteRequest(metricFamilies)
 		err = c.client.SendTrafficMetrics(writeRequest)
 		if err != nil {

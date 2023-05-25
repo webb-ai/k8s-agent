@@ -134,7 +134,7 @@ spec:
             - -tls
             - -procfs
             - /hostproc
-          image: public.ecr.aws/p5v6t9h8/k8s-traffic-collector:latest
+          image: public.ecr.aws/p5v6t9h8/k8s-traffic-collector:v0.8.3-10-g8e84d65
           imagePullPolicy: Always
           name: traffic-collector
           env:

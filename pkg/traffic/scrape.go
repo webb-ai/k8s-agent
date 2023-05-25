@@ -13,22 +13,23 @@ import (
 )
 
 // ScrapeTarget scrapes an http endpoint for prometheus metrics
-func ScrapeTarget(targetURL string) (map[string]*dto.MetricFamily, error) {
+func ScrapeTarget(targetURL string) (string, map[string]*dto.MetricFamily, error) {
 	resp, err := retryablehttp.Get(targetURL)
 	if err != nil {
-		return nil, fmt.Errorf("error fetching metrics from target: %v", err)
+		return "", nil, fmt.Errorf("error fetching metrics from target: %v", err)
 	}
 	//nolint:staticcheck // SA5001 Ignore error here
 	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, fmt.Errorf("error reading response body: %v", err)
+		return "", nil, fmt.Errorf("error reading response body: %v", err)
 	}
 
 	parser := expfmt.TextParser{}
 
-	return parser.TextToMetricFamilies(bytes.NewReader(body))
+	metricFamily, err := parser.TextToMetricFamilies(bytes.NewReader(body))
+	return string(body), metricFamily, err
 }
 
 // SetPodTargets tells traffic collector which pods to target

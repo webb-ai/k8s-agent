@@ -1,6 +1,9 @@
 package k8s
 
-import "k8s.io/apimachinery/pkg/runtime/schema"
+import (
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/discovery"
+)
 
 var configMapGVR = schema.GroupVersionResource{Group: "", Version: "v1", Resource: "configmaps"}
 var cronjobGVR = schema.GroupVersionResource{Group: "batch", Version: "v1", Resource: "cronjobs"}
@@ -49,4 +52,23 @@ var WatchedGVRs = []schema.GroupVersionResource{
 
 var WorkloadAndEventGVRs = []schema.GroupVersionResource{
 	eventGVR,
+}
+
+func GetAllResources(discoveryClient discovery.ServerResourcesInterface) (map[schema.GroupVersionResource]struct{}, error) {
+
+	resources, err := discoveryClient.ServerPreferredResources()
+	if err != nil {
+		return nil, err
+	}
+
+	result := make(map[schema.GroupVersionResource]struct{})
+
+	for _, resourcesList := range resources {
+		for _, resource := range resourcesList.APIResources {
+			gvr := schema.GroupVersionResource{Group: resource.Group, Version: resource.Version, Resource: resource.Name}
+			result[gvr] = struct{}{}
+		}
+	}
+
+	return result, nil
 }
