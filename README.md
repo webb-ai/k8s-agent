@@ -31,13 +31,13 @@ For configmaps and secrets, the data field is deleted since it may contain sensi
 ## Deploy to your cluster
 
 ```bash
-kubectl apply -f manifests/k8s-resource-collector.yaml
+kubectl apply -f manifests/k8s-agent.yaml
 ```
 
 ## Uninstall
 
 ```bash
-kubectl delete -f manifests/k8s-resource-collector.yaml
+kubectl delete -f manifests/k8s-agent.yaml
 ```
 
 ## Stream to webb.ai
