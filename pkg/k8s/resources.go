@@ -29,6 +29,8 @@ var networkpolicyGVR = schema.GroupVersionResource{Group: "networking.k8s.io", V
 var hpaGVR = schema.GroupVersionResource{Group: "autoscaling", Version: "v2", Resource: "horizontalpodautoscalers"}
 var vpaGVR = schema.GroupVersionResource{Group: "autoscaling.k8s.io", Version: "v1", Resource: "verticalpodautoscalers"}
 var kedaScaledObjectGVR = schema.GroupVersionResource{Group: "keda.sh", Version: "v1alpha1", Resource: "ScaledObject"}
+var mutatingWebhookGVR = schema.GroupVersionResource{Group: "admissionregistration.k8s.io", Version: "v1", Resource: "mutatingwebhookconfigurations"}
+var validatingWebhookGVR = schema.GroupVersionResource{Group: "admissionregistration.k8s.io", Version: "v1", Resource: "validatingwebhookconfigurations"}
 
 var WatchedGVRs = []schema.GroupVersionResource{
 	configMapGVR,
@@ -54,6 +56,8 @@ var WatchedGVRs = []schema.GroupVersionResource{
 	hpaGVR,
 	vpaGVR,
 	kedaScaledObjectGVR,
+	mutatingWebhookGVR,
+	validatingWebhookGVR,
 }
 
 var WorkloadAndEventGVRs = []schema.GroupVersionResource{
