@@ -25,6 +25,9 @@ K8s resource collector subscribes to the changes in the K8s API server for a spe
 - ingressClass
 - ingress
 - networkPolicy
+- hpa objects (if hpa is used)
+- vpa objects (if vpa is used)
+- keda objects (if keda is used)
 
 For configmaps and secrets, the data field is deleted since it may contain sensitive information.
 
@@ -51,6 +54,7 @@ pod_name=$(kubectl get pods -n webbai | grep resource-collector | awk '{print $1
 kubectl exec --stdin --tty $pod_name -n webbai -- /bin/sh
 cd /app/data/
 cat k8s_resource.log
+cat k8s_traffic.log
 ```
 
-Each row of `k8s_resource.log` is a json. 
+Each row of `k8s_resource.log` and `k8s_traffic.log` is a json. 

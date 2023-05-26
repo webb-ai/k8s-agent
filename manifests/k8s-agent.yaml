@@ -27,6 +27,14 @@ spec:
         app: resource-collector
     spec:
       serviceAccountName: webbai
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: "kubernetes.io/arch"
+                    operator: In
+                    values: ["amd64"]
       containers:
         - image: public.ecr.aws/p5v6t9h8/k8s-resource-collector:v0.3-26-g6534e11
           imagePullPolicy: Always
