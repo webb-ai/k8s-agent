@@ -180,9 +180,9 @@ func (c *Collector) Start(ctx context.Context) error {
 		return err
 	}
 
-	klog.Infof("all resources %v, %d", allResources, len(allResources))
+	klog.Infof("all resources %v", allResources)
 	for _, gvr := range WatchedGVRs {
-		if _, ok := allResources[gvr.String()]; ok {
+		if _, ok := allResources[gvr]; ok {
 			c.addHandlerForGvr(gvr, handler)
 		} else {
 			klog.Infof("skipping gvr %v", gvr)

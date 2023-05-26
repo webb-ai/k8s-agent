@@ -3,6 +3,7 @@ package k8s
 import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/discovery"
+	"k8s.io/klog/v2"
 )
 
 var configMapGVR = schema.GroupVersionResource{Group: "", Version: "v1", Resource: "configmaps"}
@@ -64,18 +65,22 @@ var WorkloadAndEventGVRs = []schema.GroupVersionResource{
 	eventGVR,
 }
 
-func GetAllResources(discoveryClient discovery.ServerResourcesInterface) (map[string]schema.GroupVersionResource, error) {
+func GetAllResources(discoveryClient discovery.ServerResourcesInterface) (map[schema.GroupVersionResource]struct{}, error) {
 	resources, err := discoveryClient.ServerPreferredResources()
 	if err != nil {
 		return nil, err
 	}
 
-	result := make(map[string]schema.GroupVersionResource)
+	result := make(map[schema.GroupVersionResource]struct{})
 
 	for _, resourcesList := range resources {
+		gv, err := schema.ParseGroupVersion(resourcesList.GroupVersion)
+		if err != nil {
+			klog.Warningf("%v", err)
+		}
 		for _, resource := range resourcesList.APIResources {
-			gvr := schema.GroupVersionResource{Group: resource.Group, Version: resource.Version, Resource: resource.Name}
-			result[gvr.String()] = gvr
+			gvr := schema.GroupVersionResource{Group: gv.Group, Version: gv.Version, Resource: resource.Name}
+			result[gvr] = struct{}{}
 		}
 	}
 
