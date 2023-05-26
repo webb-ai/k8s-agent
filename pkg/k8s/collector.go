@@ -3,8 +3,9 @@ package k8s
 import (
 	"context"
 	"fmt"
-	"k8s.io/client-go/discovery"
 	"time"
+
+	"k8s.io/client-go/discovery"
 
 	corev1 "k8s.io/api/core/v1"
 

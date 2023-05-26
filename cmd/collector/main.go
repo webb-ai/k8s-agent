@@ -3,10 +3,11 @@ package main
 import (
 	"flag"
 	"fmt"
-	"k8s.io/client-go/discovery"
 	"os"
 	"path"
 	"time"
+
+	"k8s.io/client-go/discovery"
 
 	"k8s.io/apimachinery/pkg/labels"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
