@@ -26,6 +26,9 @@ var statefulsetGVR = schema.GroupVersionResource{Group: "apps", Version: "v1", R
 var ingressclassGVR = schema.GroupVersionResource{Group: "networking.k8s.io", Version: "v1", Resource: "ingressclasses"}
 var ingressGVR = schema.GroupVersionResource{Group: "networking.k8s.io", Version: "v1", Resource: "ingresses"}
 var networkpolicyGVR = schema.GroupVersionResource{Group: "networking.k8s.io", Version: "v1", Resource: "networkpolicies"}
+var hpaGVR = schema.GroupVersionResource{Group: "autoscaling", Version: "v2", Resource: "horizontalpodautoscalers"}
+var vpaGVR = schema.GroupVersionResource{Group: "autoscaling.k8s.io", Version: "v1", Resource: "verticalpodautoscalers"}
+var kedaScaledObjectGVR = schema.GroupVersionResource{Group: "keda.sh", Version: "v1alpha1", Resource: "ScaledObject"}
 
 var WatchedGVRs = []schema.GroupVersionResource{
 	configMapGVR,
@@ -48,25 +51,27 @@ var WatchedGVRs = []schema.GroupVersionResource{
 	ingressclassGVR,
 	ingressGVR,
 	networkpolicyGVR,
+	hpaGVR,
+	vpaGVR,
+	kedaScaledObjectGVR,
 }
 
 var WorkloadAndEventGVRs = []schema.GroupVersionResource{
 	eventGVR,
 }
 
-func GetAllResources(discoveryClient discovery.ServerResourcesInterface) (map[schema.GroupVersionResource]struct{}, error) {
-
+func GetAllResources(discoveryClient discovery.ServerResourcesInterface) (map[string]schema.GroupVersionResource, error) {
 	resources, err := discoveryClient.ServerPreferredResources()
 	if err != nil {
 		return nil, err
 	}
 
-	result := make(map[schema.GroupVersionResource]struct{})
+	result := make(map[string]schema.GroupVersionResource)
 
 	for _, resourcesList := range resources {
 		for _, resource := range resourcesList.APIResources {
 			gvr := schema.GroupVersionResource{Group: resource.Group, Version: resource.Version, Resource: resource.Name}
-			result[gvr] = struct{}{}
+			result[gvr.String()] = gvr
 		}
 	}
 

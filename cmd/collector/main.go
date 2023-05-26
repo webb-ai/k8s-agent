@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"k8s.io/client-go/discovery"
 	"os"
 	"path"
 	"time"
@@ -129,6 +130,7 @@ func main() {
 		klog.Fatal(err)
 	}
 
+	discoveryClient := discovery.NewDiscoveryClientForConfigOrDie(config)
 	resourceLogger := newRotateFileLogger(dataDir, "k8s_resource.log", 100, 28, 10)
 	trafficLogger := newRotateFileLogger(dataDir, "k8s_traffic.log", 100, 28, 10)
 	collector := k8s.NewCollector(
@@ -139,6 +141,7 @@ func main() {
 		trafficCollectorServerPort,
 		trafficCollectorMetricsPort,
 		dynamicClient,
+		discoveryClient,
 		resourceLogger,
 		trafficLogger,
 		NewClient(),

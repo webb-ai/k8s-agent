@@ -3,6 +3,7 @@ package k8s
 import (
 	"context"
 	"fmt"
+	"k8s.io/client-go/discovery"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
@@ -33,6 +34,7 @@ type Collector struct {
 	trafficCollectorServerPort       int
 	trafficCollectorMetricsPort      int
 	dynamicClient                    dynamic.Interface
+	discoveryClient                  discovery.ServerResourcesInterface
 	resourceLogger                   zerolog.Logger
 	trafficLogger                    zerolog.Logger
 	client                           api.Client
@@ -48,6 +50,7 @@ func NewCollector(
 	trafficCollectorServerPort int,
 	trafficCollectorMetricsPort int,
 	dynamicClient dynamic.Interface,
+	discoveryClient discovery.ServerResourcesInterface,
 	resourceLogger zerolog.Logger,
 	trafficLogger zerolog.Logger,
 	client api.Client,
@@ -60,6 +63,7 @@ func NewCollector(
 		trafficCollectorServerPort:       trafficCollectorServerPort,
 		trafficCollectorMetricsPort:      trafficCollectorMetricsPort,
 		dynamicClient:                    dynamicClient,
+		discoveryClient:                  discoveryClient,
 		resourceLogger:                   resourceLogger,
 		trafficLogger:                    trafficLogger,
 		client:                           client,
@@ -170,8 +174,18 @@ func (c *Collector) Start(ctx context.Context) error {
 		DeleteFunc: c.OnDelete,
 	}
 
+	allResources, err := GetAllResources(c.discoveryClient)
+	if err != nil {
+		return err
+	}
+
+	klog.Infof("all resources %v, %d", allResources, len(allResources))
 	for _, gvr := range WatchedGVRs {
-		c.addHandlerForGvr(gvr, handler)
+		if _, ok := allResources[gvr.String()]; ok {
+			c.addHandlerForGvr(gvr, handler)
+		} else {
+			klog.Infof("skipping gvr %v", gvr)
+		}
 	}
 
 	noOpHandler := cache.ResourceEventHandlerFuncs{

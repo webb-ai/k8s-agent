@@ -28,7 +28,7 @@ spec:
     spec:
       serviceAccountName: webbai
       containers:
-        - image: public.ecr.aws/p5v6t9h8/k8s-resource-collector:v0.3-18-g0e7c41c
+        - image: public.ecr.aws/p5v6t9h8/k8s-resource-collector:v0.3-21-gd98e8be
           imagePullPolicy: Always
           name: resource-collector
           env:
@@ -134,7 +134,7 @@ spec:
             - -tls
             - -procfs
             - /hostproc
-          image: public.ecr.aws/p5v6t9h8/k8s-traffic-collector:v0.8.3-10-g8e84d65
+          image: public.ecr.aws/p5v6t9h8/k8s-traffic-collector:v0.8.3-14-g46594b0
           imagePullPolicy: Always
           name: traffic-collector
           env:
