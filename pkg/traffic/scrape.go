@@ -16,14 +16,14 @@ import (
 func ScrapeTarget(targetURL string) (string, map[string]*dto.MetricFamily, error) {
 	resp, err := retryablehttp.Get(targetURL)
 	if err != nil {
-		return "", nil, fmt.Errorf("error fetching metrics from target: %v", err)
+		return "", nil, fmt.Errorf("error fetching metrics from target: %w", err)
 	}
 	//nolint:staticcheck // SA5001 Ignore error here
 	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return "", nil, fmt.Errorf("error reading response body: %v", err)
+		return "", nil, fmt.Errorf("error reading response body: %w", err)
 	}
 
 	parser := expfmt.TextParser{}
@@ -36,11 +36,11 @@ func ScrapeTarget(targetURL string) (string, map[string]*dto.MetricFamily, error
 func SetPodTargets(pods []corev1.Pod, targetUrl string) error {
 	podsMarshalled, err := json.Marshal(pods)
 	if err != nil {
-		return fmt.Errorf("error marshalling pods to json: %v", err)
+		return fmt.Errorf("error marshalling pods to json: %w", err)
 	}
 	resp, err := retryablehttp.Post(targetUrl, "application/json", bytes.NewBuffer(podsMarshalled))
 	if err != nil {
-		return fmt.Errorf("error setting pod target for %s: %v", targetUrl, err)
+		return fmt.Errorf("error setting pod target for %s: %w", targetUrl, err)
 	}
 
 	//nolint:staticcheck // SA5001 Ignore error here

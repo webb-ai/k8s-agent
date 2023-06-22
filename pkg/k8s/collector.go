@@ -161,7 +161,7 @@ func (c *Collector) addHandlerForGvr(gvr schema.GroupVersionResource, handler ca
 	informer := c.informerFactory.ForResource(gvr)
 	_, err := informer.Informer().AddEventHandler(handler)
 	if err != nil {
-		klog.Warningf("unable to watch for resource %v: %v", gvr, err)
+		klog.Warningf("unable to watch for resource %v: %w", gvr, err)
 	}
 }
 

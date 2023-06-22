@@ -76,7 +76,7 @@ func GetAllResources(discoveryClient discovery.ServerResourcesInterface) (map[sc
 	for _, resourcesList := range resources {
 		gv, err := schema.ParseGroupVersion(resourcesList.GroupVersion)
 		if err != nil {
-			klog.Warningf("%v", err)
+			klog.Warningf("%w", err)
 		}
 		for _, resource := range resourcesList.APIResources {
 			gvr := schema.GroupVersionResource{Group: gv.Group, Version: gv.Version, Resource: resource.Name}
