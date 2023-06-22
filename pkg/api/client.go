@@ -3,7 +3,7 @@ package api
 import "github.com/prometheus/prometheus/prompb"
 
 type Client interface {
-	SendK8sChangeEvent(*ResourceChangeEvent) error
+	SendChangeEvent(*ChangeEvent) error
 	SendK8sResources(*ResourceList) error
 	SendTrafficMetrics(*prompb.WriteRequest) error
 }
@@ -11,7 +11,7 @@ type Client interface {
 type NoOpClient struct {
 }
 
-func (nc *NoOpClient) SendK8sChangeEvent(*ResourceChangeEvent) error {
+func (nc *NoOpClient) SendChangeEvent(*ChangeEvent) error {
 	return nil
 }
 

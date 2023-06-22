@@ -16,19 +16,20 @@ const (
 	ObjectAdd    EventType = "object_add"
 	ObjectUpdate EventType = "object_update"
 	ObjectDelete EventType = "object_delete"
+	KafkaUpdate  EventType = "kafka_update"
 )
 
-type ResourceChangeEvent struct {
+type ChangeEvent struct {
 	OldObject *unstructured.Unstructured `json:"old_object"`
 	NewObject *unstructured.Unstructured `json:"new_object"`
 	EventType EventType                  `json:"event_type"`
 	Time      int64                      `json:"time"`
 }
 
-func NewResourceChangeEvent(oldObj, newObj *unstructured.Unstructured) *ResourceChangeEvent {
+func NewK8sChangeEvent(oldObj, newObj *unstructured.Unstructured) *ChangeEvent {
 	util.PruneData(oldObj)
 	util.PruneData(newObj)
-	event := &ResourceChangeEvent{
+	event := &ChangeEvent{
 		OldObject: oldObj,
 		NewObject: newObj,
 		EventType: ObjectUpdate,
@@ -42,6 +43,15 @@ func NewResourceChangeEvent(oldObj, newObj *unstructured.Unstructured) *Resource
 		event.EventType = ObjectDelete
 	}
 	return event
+}
+
+func NewKafkaChangeEvent(oldObj, newObj interface{}, apiKey string) *ChangeEvent {
+	return &ChangeEvent{
+		OldObject: &unstructured.Unstructured{Object: map[string]interface{}{apiKey: oldObj}},
+		NewObject: &unstructured.Unstructured{Object: map[string]interface{}{apiKey: newObj}},
+		EventType: KafkaUpdate,
+		Time:      time.Now().Unix(),
+	}
 }
 
 type ResourceList struct {

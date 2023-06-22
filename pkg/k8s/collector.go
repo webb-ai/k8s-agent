@@ -88,10 +88,10 @@ func (c *Collector) OnAdd(obj interface{}) {
 		return
 	}
 
-	event := api.NewResourceChangeEvent(nil, runtimeObject)
+	event := api.NewK8sChangeEvent(nil, runtimeObject)
 	c.resourceLogger.Info().Any("payload", event).Msg("object_add")
 
-	_ = c.client.SendK8sChangeEvent(event)
+	_ = c.client.SendChangeEvent(event)
 
 	c.metrics.ChangeEventCounter.With(
 		map[string]string{
@@ -108,10 +108,10 @@ func (c *Collector) OnDelete(obj interface{}) {
 		return
 	}
 
-	event := api.NewResourceChangeEvent(runtimeObject, nil)
+	event := api.NewK8sChangeEvent(runtimeObject, nil)
 
 	c.resourceLogger.Info().Any("payload", event).Msg("object_delete")
-	_ = c.client.SendK8sChangeEvent(event)
+	_ = c.client.SendChangeEvent(event)
 	c.metrics.ChangeEventCounter.With(
 		map[string]string{
 			EventTypeKey:  "object_delete",
@@ -141,10 +141,10 @@ func (c *Collector) OnUpdate(oldObj, newObj interface{}) {
 	if oldObject.GetResourceVersion() != newObject.GetResourceVersion() || util.HasStatusChanged(oldObject, newObject) {
 		klog.Infof("detected resource version change or status change of %s/%s(%s)",
 			newObject.GetNamespace(), newObject.GetName(), newObject.GroupVersionKind())
-		event := api.NewResourceChangeEvent(oldObject, newObject)
+		event := api.NewK8sChangeEvent(oldObject, newObject)
 		c.resourceLogger.Info().Any("payload", event).Msg("object_update")
 
-		_ = c.client.SendK8sChangeEvent(event)
+		_ = c.client.SendChangeEvent(event)
 
 		c.metrics.ChangeEventCounter.With(
 			map[string]string{

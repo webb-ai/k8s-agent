@@ -54,7 +54,7 @@ func NewWebbaiClient() api.Client {
 	return client
 }
 
-func (c *WebbaiHttpClient) SendK8sChangeEvent(event *api.ResourceChangeEvent) error {
+func (c *WebbaiHttpClient) SendChangeEvent(event *api.ChangeEvent) error {
 	klog.Infof("sending k8s change event to %s", c.ChangeUrl)
 	return c.sendRequest(c.ChangeUrl, event)
 }
