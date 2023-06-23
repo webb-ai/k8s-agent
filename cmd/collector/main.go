@@ -5,7 +5,10 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"strings"
 	"time"
+
+	"github.com/webb-ai/k8s-agent/pkg/kafka"
 
 	"k8s.io/client-go/discovery"
 
@@ -42,6 +45,8 @@ var (
 	trafficCollectorPodSelector      = "app=traffic-collector"
 	trafficCollectorMetricsPort      = 9095
 	trafficCollectorServerPort       = 8897
+	kafkaBootstrapServers            = ""
+	kafkaPollingInterval             = time.Minute * 5
 	metricsAddress                   = ":9090"
 	healthProbeAddress               = ":9091"
 	dataDir                          = "/app/data/"
@@ -67,6 +72,24 @@ func NewClient() api.Client {
 	return client
 }
 
+func newKafkaCollector() *kafka.Collector {
+	if kafkaBootstrapServers == "" {
+		klog.Infof("kafka bootstrap server not configured, skipping kafka collector loop")
+		return nil
+	}
+	bootstrapServers := strings.Split(kafkaBootstrapServers, ",")
+	collector, err := kafka.NewKafkaCollector(
+		bootstrapServers,
+		kafkaPollingInterval,
+		NewClient(),
+	)
+	if err != nil {
+		klog.Errorf("error creating kafka collection: %w", err)
+		return nil
+	}
+	return collector
+}
+
 func main() {
 	var version bool
 	flag.BoolVar(&version, "version", false, "show version")
@@ -79,6 +102,9 @@ func main() {
 	flag.StringVar(&trafficCollectorPodSelector, "traffic-collector-pod-selector", trafficCollectorPodSelector, "pod selector for webbai traffic collector")
 	flag.IntVar(&trafficCollectorMetricsPort, "traffic-collector-metrics-port", trafficCollectorMetricsPort, "port number to get metrics from traffic collector")
 	flag.IntVar(&trafficCollectorServerPort, "traffic-collector-server-port", trafficCollectorServerPort, "port number of traffic collector server")
+
+	flag.StringVar(&kafkaBootstrapServers, "kafka-bootstrap-servers", kafkaBootstrapServers, "bootstrap servers for kafka")
+	flag.DurationVar(&kafkaPollingInterval, "kafka-polling-interval", kafkaPollingInterval, "polling interval to detect kafka changes")
 
 	flag.Parse()
 
@@ -121,7 +147,7 @@ func main() {
 	}
 
 	if err := controllerManager.AddHealthzCheck("ping", healthz.Ping); err != nil {
-		klog.Fatalf("Failed to add health check endpoint: %v", err)
+		klog.Fatalf("Failed to add health check endpoint: %w", err)
 	}
 
 	klog.Infof("creating resource collector")
@@ -151,6 +177,12 @@ func main() {
 	klog.Infof("adding resource collector to controller manager")
 	if err := controllerManager.Add(collector); err != nil {
 		klog.Fatal(err)
+	}
+
+	if kafkaCollector := newKafkaCollector(); kafkaCollector != nil {
+		if err := controllerManager.Add(kafkaCollector); err != nil {
+			klog.Fatal(err)
+		}
 	}
 
 	ctx := apiserver.SetupSignalContext()
