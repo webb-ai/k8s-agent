@@ -38,9 +38,18 @@ func NewK8sChangeEvent(oldObj, newObj *unstructured.Unstructured) *ChangeEvent {
 
 	if oldObj == nil {
 		event.EventType = ObjectAdd
+		creationTime, err := util.GetCreationTimestamp(newObj)
+		if err == nil { // no error
+			event.Time = creationTime.Unix()
+		}
+
 	}
 	if newObj == nil {
 		event.EventType = ObjectDelete
+		deletionTime, err := util.GetDeletionTimestamp(oldObj)
+		if err == nil { // no error
+			event.Time = deletionTime.Unix()
+		}
 	}
 	return event
 }

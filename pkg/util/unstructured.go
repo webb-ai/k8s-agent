@@ -3,6 +3,7 @@ package util
 import (
 	"fmt"
 	"reflect"
+	"time"
 
 	corev1 "k8s.io/api/core/v1"
 
@@ -75,4 +76,14 @@ func hasFieldChanged(oldObject, newObject *unstructured.Unstructured, field stri
 	}
 
 	return !reflect.DeepEqual(oldMap, newMap)
+}
+
+func GetCreationTimestamp(object *unstructured.Unstructured) (time.Time, error) {
+	val, _, _ := unstructured.NestedString(object.Object, "metadata", "creationTimestamp")
+	return time.Parse(time.RFC3339, val)
+}
+
+func GetDeletionTimestamp(object *unstructured.Unstructured) (time.Time, error) {
+	val, _, _ := unstructured.NestedString(object.Object, "metadata", "deletionTimestamp")
+	return time.Parse(time.RFC3339, val)
 }
