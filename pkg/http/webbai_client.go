@@ -82,7 +82,7 @@ func (c *WebbaiHttpClient) SendTrafficMetrics(request *prompb.WriteRequest) erro
 	req.Header.Set("Content-Encoding", "snappy")
 	req.Header.Set("Authorization", "Bearer "+c.token.Load())
 
-	client := retryablehttp.NewClient()
+	client := makeHttpClient()
 
 	resp, err := client.Do(req)
 	if err != nil {
@@ -113,7 +113,7 @@ func (c *WebbaiHttpClient) sendRequest(url string, data interface{}) error {
 		klog.Error(err)
 		return err
 	}
-	client := retryablehttp.NewClient()
+	client := makeHttpClient()
 	response, err := SendRequestWithToken(client, url, c.token.Load(), bytes)
 	if err != nil {
 		klog.Error(err)
@@ -140,7 +140,7 @@ func (c *WebbaiHttpClient) sendRequest(url string, data interface{}) error {
 
 func (c *WebbaiHttpClient) obtainNewToken() error {
 	klog.Infof("request a new token from %s", c.AuthUrl)
-	client := retryablehttp.NewClient()
+	client := makeHttpClient()
 	token, err := GetAccessToken(client, c.AuthUrl, c.ClientId, c.ClientSecret, c.ClientId)
 	if err != nil {
 		klog.Error(err)
@@ -149,4 +149,10 @@ func (c *WebbaiHttpClient) obtainNewToken() error {
 	klog.Infof("got access token")
 	c.token.Store(token)
 	return nil
+}
+
+func makeHttpClient() *retryablehttp.Client {
+	client := retryablehttp.NewClient()
+	client.RetryMax = 10
+	return client
 }
