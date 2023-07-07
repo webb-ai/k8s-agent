@@ -58,6 +58,10 @@ spec:
             - "9095"
             - --traffic-collector-server-port
             - "8897"
+            - --kafka-bootstrap-servers
+            - ""
+            - --kafka-polling-interval
+            - "5m"
           livenessProbe:
             httpGet:
               path: /healthz
