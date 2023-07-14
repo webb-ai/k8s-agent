@@ -63,6 +63,12 @@ var WatchedGVRs = []schema.GroupVersionResource{
 
 var WorkloadAndEventGVRs = []schema.GroupVersionResource{
 	eventGVR,
+	serviceGVR,
+	deploymentGVR,
+	statefulsetGVR,
+	daemonsetGVR,
+	jobGVR,
+	cronjobGVR,
 }
 
 func GetAllResources(discoveryClient discovery.ServerResourcesInterface) (map[schema.GroupVersionResource]struct{}, error) {
