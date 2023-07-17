@@ -36,7 +36,7 @@ spec:
                     operator: In
                     values: ["amd64"]
       containers:
-        - image: public.ecr.aws/p5v6t9h8/k8s-resource-collector:v0.4.0
+        - image: public.ecr.aws/p5v6t9h8/k8s-resource-collector:v0.4.1
           imagePullPolicy: Always
           name: resource-collector
           env:
