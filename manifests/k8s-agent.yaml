@@ -126,6 +126,10 @@ spec:
       app: traffic-collector
   template:
     metadata:
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/path: /webbai_metrics
+        prometheus.io/port: "9095"
       labels:
         app: traffic-collector
       name: traffic-collector
