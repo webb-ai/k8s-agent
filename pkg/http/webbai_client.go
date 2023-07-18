@@ -43,7 +43,7 @@ func NewWebbaiClient() api.Client {
 		AuthUrl:      "https://api.webb.ai/oauth/token",
 		ChangeUrl:    "https://api.webb.ai/k8s_changes",
 		ResourceUrl:  "https://api.webb.ai/k8s_resources",
-		MetricsUrl:   "https://api.webb.ai/metrics/write",
+		MetricsUrl:   "https://api.webb.ai/metrics",
 	}
 	err := client.obtainNewToken()
 	if err != nil {
