@@ -63,6 +63,7 @@ var WatchedGVRs = []schema.GroupVersionResource{
 
 var WorkloadAndEventGVRs = []schema.GroupVersionResource{
 	eventGVR,
+	podGVR,
 	serviceGVR,
 	deploymentGVR,
 	statefulsetGVR,
