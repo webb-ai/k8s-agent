@@ -143,6 +143,9 @@ func (c *TrafficCollector) setServiceIps() {
 	c.collectServiceIps(serviceByIp)
 	c.collectClusterIps(serviceByClusterIp)
 
+	klog.Infof("new service by ip mapping: %v", serviceByIp)
+	klog.Infof("new service by cluster ip mapping: %v", serviceByClusterIp)
+
 	pods, err := c.informerFactory.ForResource(podGVR).Lister().List(c.podSelector)
 	if err != nil {
 		klog.Error(err)
@@ -162,8 +165,6 @@ func (c *TrafficCollector) setServiceIps() {
 			}
 		}
 	}
-
-	klog.Infof("new ip mapping: %v", serviceByIp)
 }
 
 func (c *TrafficCollector) collectClusterIps(serviceByClusterIp map[string]string) {
