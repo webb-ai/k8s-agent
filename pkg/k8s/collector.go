@@ -2,16 +2,9 @@ package k8s
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"k8s.io/client-go/discovery"
-
-	corev1 "k8s.io/api/core/v1"
-
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-
-	"github.com/webb-ai/k8s-agent/pkg/traffic"
 
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
@@ -21,54 +14,34 @@ import (
 
 	"github.com/rs/zerolog"
 	"github.com/webb-ai/k8s-agent/pkg/api"
-	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/dynamic/dynamicinformer"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/klog/v2"
 )
 
 type Collector struct {
-	defaultResyncPeriod              time.Duration
-	eventCollectionInterval          time.Duration
-	trafficMetricsCollectionInterval time.Duration
-	trafficCollectorPodSelector      labels.Selector
-	trafficCollectorServerPort       int
-	trafficCollectorMetricsPort      int
-	dynamicClient                    dynamic.Interface
-	discoveryClient                  discovery.ServerResourcesInterface
-	resourceLogger                   zerolog.Logger
-	trafficLogger                    zerolog.Logger
-	client                           api.Client
-	informerFactory                  dynamicinformer.DynamicSharedInformerFactory
-	metrics                          *Metrics
+	eventCollectionInterval time.Duration
+	informerFactory         dynamicinformer.DynamicSharedInformerFactory
+	discoveryClient         discovery.ServerResourcesInterface
+	logger                  zerolog.Logger
+	client                  api.Client
+	metrics                 *Metrics
 }
 
 func NewCollector(
-	defaultResyncPeriod,
-	eventCollectionInterval,
-	trafficMetricsCollectionInterval time.Duration,
-	trafficCollectorPodSelector labels.Selector,
-	trafficCollectorServerPort int,
-	trafficCollectorMetricsPort int,
-	dynamicClient dynamic.Interface,
+	eventCollectionInterval time.Duration,
+	informerFactory dynamicinformer.DynamicSharedInformerFactory,
 	discoveryClient discovery.ServerResourcesInterface,
-	resourceLogger zerolog.Logger,
-	trafficLogger zerolog.Logger,
+	logger zerolog.Logger,
 	client api.Client,
 ) *Collector {
 	return &Collector{
-		defaultResyncPeriod:              defaultResyncPeriod,
-		eventCollectionInterval:          eventCollectionInterval,
-		trafficMetricsCollectionInterval: trafficMetricsCollectionInterval,
-		trafficCollectorPodSelector:      trafficCollectorPodSelector,
-		trafficCollectorServerPort:       trafficCollectorServerPort,
-		trafficCollectorMetricsPort:      trafficCollectorMetricsPort,
-		dynamicClient:                    dynamicClient,
-		discoveryClient:                  discoveryClient,
-		resourceLogger:                   resourceLogger,
-		trafficLogger:                    trafficLogger,
-		client:                           client,
-		metrics:                          NewMetrics(),
+		eventCollectionInterval: eventCollectionInterval,
+		informerFactory:         informerFactory,
+		discoveryClient:         discoveryClient,
+		logger:                  logger,
+		client:                  client,
+		metrics:                 NewMetrics(),
 	}
 }
 
@@ -89,7 +62,7 @@ func (c *Collector) OnAdd(obj interface{}) {
 	}
 
 	event := api.NewK8sChangeEvent(nil, runtimeObject)
-	c.resourceLogger.Info().Any("payload", event).Msg("object_add")
+	c.logger.Info().Any("payload", event).Msg("object_add")
 
 	_ = c.client.SendChangeEvent(event)
 
@@ -110,7 +83,7 @@ func (c *Collector) OnDelete(obj interface{}) {
 
 	event := api.NewK8sChangeEvent(runtimeObject, nil)
 
-	c.resourceLogger.Info().Any("payload", event).Msg("object_delete")
+	c.logger.Info().Any("payload", event).Msg("object_delete")
 	_ = c.client.SendChangeEvent(event)
 	c.metrics.ChangeEventCounter.With(
 		map[string]string{
@@ -142,7 +115,7 @@ func (c *Collector) OnUpdate(oldObj, newObj interface{}) {
 		klog.Infof("detected resource version change or status change of %s/%s(%s)",
 			newObject.GetNamespace(), newObject.GetName(), newObject.GroupVersionKind())
 		event := api.NewK8sChangeEvent(oldObject, newObject)
-		c.resourceLogger.Info().Any("payload", event).Msg("object_update")
+		c.logger.Info().Any("payload", event).Msg("object_update")
 
 		_ = c.client.SendChangeEvent(event)
 
@@ -167,7 +140,6 @@ func (c *Collector) addHandlerForGvr(gvr schema.GroupVersionResource, handler ca
 
 func (c *Collector) Start(ctx context.Context) error {
 	klog.Infof("starting k8s resource collector process")
-	c.informerFactory = dynamicinformer.NewDynamicSharedInformerFactory(c.dynamicClient, c.defaultResyncPeriod)
 
 	handler := cache.ResourceEventHandlerFuncs{
 		AddFunc:    c.OnAdd,
@@ -200,7 +172,6 @@ func (c *Collector) Start(ctx context.Context) error {
 	c.informerFactory.WaitForCacheSync(ctx.Done())
 	c.informerFactory.Start(ctx.Done())
 	c.startWorkloadCollectionLoop(ctx)
-	c.startTrafficMetricsCollectionLoop(ctx)
 
 	<-ctx.Done()
 	klog.Infof("stopped k8s resource collector process")
@@ -232,101 +203,10 @@ func (c *Collector) collectWorkloadResourcesAndEvents() {
 		}
 
 		if len(listResult) > 0 {
-			c.resourceLogger.Info().Any("payload", listResult).Msg("resource_list")
+			c.logger.Info().Any("payload", listResult).Msg("resource_list")
 			_ = c.client.SendK8sResources(api.NewResourceList(listResult))
 		} else {
 			klog.Infof("no result for %v", gvr)
-		}
-	}
-}
-
-func (c *Collector) startTrafficMetricsCollectionLoop(ctx context.Context) {
-
-	if c.trafficCollectorPodSelector != nil {
-		klog.Infof("starting to collect traffic metrics every %v for pods with labels %v", c.trafficMetricsCollectionInterval, c.trafficCollectorPodSelector)
-		c.setTrafficCollectorTargetPods()
-		go func() {
-			for {
-				select {
-				case <-time.After(c.trafficMetricsCollectionInterval):
-					c.setTrafficCollectorTargetPods()
-					c.collectTrafficMetrics()
-				case <-ctx.Done():
-					return
-				}
-			}
-		}()
-	}
-
-}
-
-func (c *Collector) collectTrafficMetrics() {
-	pods, err := c.informerFactory.ForResource(podGVR).Lister().List(c.trafficCollectorPodSelector)
-
-	if err != nil {
-		klog.Error(err)
-		return
-	}
-
-	if len(pods) == 0 {
-		klog.Error("no traffic collector found, skipping ...")
-		return
-	}
-
-	for _, podRuntimeObject := range pods {
-		pod, err := util.UnstructuredToPod(podRuntimeObject.(*unstructured.Unstructured))
-		if err != nil {
-			klog.Error(err)
-			continue
-		}
-		podIp := pod.Status.PodIP
-		metricsUrl := fmt.Sprintf("http://%s:%d/webbai_metrics", podIp, c.trafficCollectorMetricsPort)
-		klog.Infof("scraping %s for prometheus metrics", metricsUrl)
-		metricText, metricFamilies, err := traffic.ScrapeTarget(metricsUrl)
-		if err != nil {
-			klog.Error(err)
-		}
-
-		c.trafficLogger.Info().Any("payload", metricText).Msg("metrics")
-		writeRequest := traffic.MetricFamiliesToProtoWriteRequest(metricFamilies)
-		err = c.client.SendTrafficMetrics(writeRequest)
-		if err != nil {
-			klog.Error(err)
-		}
-	}
-}
-
-func (c *Collector) setTrafficCollectorTargetPods() {
-	var allRunningPods []corev1.Pod
-	var trafficCollectorPods []corev1.Pod
-	pods, err := c.informerFactory.ForResource(podGVR).Lister().List(labels.Everything())
-	if err != nil {
-		klog.Error(err)
-		return
-	}
-
-	for _, podRuntimeObject := range pods {
-		pod, err := util.UnstructuredToPod(podRuntimeObject.(*unstructured.Unstructured))
-		if err != nil {
-			klog.Error(err)
-			continue
-		}
-		if pod.Status.Phase == corev1.PodRunning && !c.trafficCollectorPodSelector.Matches(labels.Set(pod.Labels)) {
-			klog.Infof("targeting pod %s from namespace %s", pod.Name, pod.Namespace)
-			allRunningPods = append(allRunningPods, *pod)
-		}
-		if pod.Status.Phase == corev1.PodRunning && c.trafficCollectorPodSelector.Matches(labels.Set(pod.Labels)) {
-			trafficCollectorPods = append(trafficCollectorPods, *pod)
-		}
-	}
-
-	for _, pod := range trafficCollectorPods {
-		podIp := pod.Status.PodIP
-		podTargetsUrl := fmt.Sprintf("http://%s:%d/pods/set-targeted", podIp, c.trafficCollectorServerPort)
-		klog.Infof("setting pod targets to %s", podTargetsUrl)
-		err = traffic.SetPodTargets(allRunningPods, podTargetsUrl)
-		if err != nil {
-			klog.Error(err)
 		}
 	}
 }
