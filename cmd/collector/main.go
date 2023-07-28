@@ -8,11 +8,13 @@ import (
 	"strings"
 	"time"
 
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/client-go/dynamic/dynamicinformer"
+
 	"github.com/webb-ai/k8s-agent/pkg/kafka"
 
 	"k8s.io/client-go/discovery"
 
-	"k8s.io/apimachinery/pkg/labels"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 
 	"github.com/webb-ai/k8s-agent/pkg/api"
@@ -152,26 +154,15 @@ func main() {
 
 	klog.Infof("creating resource collector")
 	dynamicClient := dynamic.NewForConfigOrDie(config)
-	trafficPodSelector, err := labels.Parse(trafficCollectorPodSelector)
-	if err != nil {
-		klog.Fatal(err)
-	}
-
 	discoveryClient := discovery.NewDiscoveryClientForConfigOrDie(config)
-	resourceLogger := newRotateFileLogger(dataDir, "k8s_resource.log", 100, 28, 10)
-	trafficLogger := newRotateFileLogger(dataDir, "k8s_traffic.log", 100, 28, 10)
+	informerFactory := dynamicinformer.NewDynamicSharedInformerFactory(dynamicClient, resyncPeriod)
+	apiClient := NewClient()
 	collector := k8s.NewCollector(
-		resyncPeriod,
 		eventCollectionInterval,
-		trafficMetricsCollectionInterval,
-		trafficPodSelector,
-		trafficCollectorServerPort,
-		trafficCollectorMetricsPort,
-		dynamicClient,
+		informerFactory,
 		discoveryClient,
-		resourceLogger,
-		trafficLogger,
-		NewClient(),
+		newRotateFileLogger(dataDir, "k8s_resource.log", 100, 28, 10),
+		apiClient,
 	)
 
 	klog.Infof("adding resource collector to controller manager")
@@ -179,6 +170,26 @@ func main() {
 		klog.Fatal(err)
 	}
 
+	klog.Infof("creating traffic collector")
+	trafficPodSelector, err := labels.Parse(trafficCollectorPodSelector)
+	if err != nil {
+		klog.Fatal(err)
+	}
+	trafficLogger := newRotateFileLogger(dataDir, "k8s_traffic.log", 100, 28, 10)
+	if trafficCollector := k8s.NewTrafficCollector(
+		informerFactory,
+		trafficMetricsCollectionInterval,
+		trafficPodSelector,
+		trafficCollectorServerPort,
+		trafficCollectorMetricsPort,
+		trafficLogger,
+		apiClient); trafficCollector != nil {
+		if err := controllerManager.Add(trafficCollector); err != nil {
+			klog.Fatal(err)
+		}
+	}
+
+	klog.Infof("creating kafka collector")
 	if kafkaCollector := newKafkaCollector(); kafkaCollector != nil {
 		if err := controllerManager.Add(kafkaCollector); err != nil {
 			klog.Fatal(err)

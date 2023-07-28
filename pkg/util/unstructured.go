@@ -5,6 +5,8 @@ import (
 	"reflect"
 	"time"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	corev1 "k8s.io/api/core/v1"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -31,6 +33,39 @@ func UnstructuredToPod(unstr *unstructured.Unstructured) (*corev1.Pod, error) {
 		return nil, err
 	}
 	return &pod, nil
+}
+
+// UnstructuredToService converts the unstructured content to Service
+func UnstructuredToService(unstr *unstructured.Unstructured) (*corev1.Service, error) {
+	var service corev1.Service
+
+	err := runtime.DefaultUnstructuredConverter.FromUnstructured(unstr.UnstructuredContent(), &service)
+	if err != nil {
+		return nil, err
+	}
+	return &service, nil
+}
+
+func GetLabelSelector(unstr *unstructured.Unstructured) (*metav1.LabelSelector, error) {
+	selector, ok, err := unstructured.NestedFieldNoCopy(unstr.UnstructuredContent(), "spec", "selector")
+	if !ok || err != nil {
+		return nil, fmt.Errorf("unexpected error: data should have .spec.selector")
+	}
+	var labelSelector metav1.LabelSelector
+	err = runtime.DefaultUnstructuredConverter.FromUnstructured(
+		selector.(map[string]interface{}), &labelSelector)
+	if err != nil {
+		return nil, err
+	}
+	return &labelSelector, nil
+}
+
+func GetClusterIP(unstr *unstructured.Unstructured) string {
+	ip, ok, err := unstructured.NestedString(unstr.UnstructuredContent(), "spec", "clusterIP")
+	if !ok || err != nil {
+		return ""
+	}
+	return ip
 }
 
 // runtimeObjecttoUnstructured converts the runtime object to unstructured

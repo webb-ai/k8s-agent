@@ -33,14 +33,36 @@ func ScrapeTarget(targetURL string) (string, map[string]*dto.MetricFamily, error
 }
 
 // SetPodTargets tells traffic collector which pods to target
-func SetPodTargets(pods []corev1.Pod, targetUrl string) error {
+func SetPodTargets(pods []*corev1.Pod, targetUrl string) error {
 	podsMarshalled, err := json.Marshal(pods)
 	if err != nil {
 		return fmt.Errorf("error marshalling pods to json: %w", err)
 	}
 	resp, err := retryablehttp.Post(targetUrl, "application/json", bytes.NewBuffer(podsMarshalled))
 	if err != nil {
-		return fmt.Errorf("error setting pod target for %s: %w", targetUrl, err)
+		return fmt.Errorf("error setting pod target at %s: %w", targetUrl, err)
+	}
+
+	//nolint:staticcheck // SA5001 Ignore error here
+	defer resp.Body.Close()
+	return nil
+}
+
+// SetServiceIps tells traffic collector what ips map to what name
+func SetServiceIps(
+	serviceByIp map[string]string,
+	serviceByClusterIp map[string]string,
+	targetUrl string,
+) error {
+	data := map[string]map[string]string{
+		"serviceByIp":        serviceByIp,
+		"serviceByClusterIp": serviceByClusterIp,
+	}
+
+	mData, _ := json.Marshal(data)
+	resp, err := retryablehttp.Post(targetUrl, "application/json", bytes.NewBuffer(mData))
+	if err != nil {
+		return fmt.Errorf("error setting service ips at %s: %w", targetUrl, err)
 	}
 
 	//nolint:staticcheck // SA5001 Ignore error here
