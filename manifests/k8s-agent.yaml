@@ -36,7 +36,7 @@ spec:
                     operator: In
                     values: ["amd64"]
       containers:
-        - image: public.ecr.aws/p5v6t9h8/k8s-resource-collector:v0.4.2
+        - image: public.ecr.aws/p5v6t9h8/k8s-resource-collector:v0.4.4
           imagePullPolicy: Always
           name: resource-collector
           env:
@@ -150,7 +150,7 @@ spec:
             - -tls
             - -procfs
             - /hostproc
-          image: public.ecr.aws/p5v6t9h8/k8s-traffic-collector:v0.8.3-15-g9dabeee
+          image: public.ecr.aws/p5v6t9h8/k8s-traffic-collector:v0.8.3.1
           imagePullPolicy: Always
           name: traffic-collector
           env:
