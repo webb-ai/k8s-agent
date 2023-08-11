@@ -39,19 +39,22 @@ var (
 
 var (
 	// TODO: make this configurable
-	qps                              = 20.0
-	burst                            = 30
-	resyncPeriod                     = time.Second * 10
-	eventCollectionInterval          = time.Minute * 5
+	qps                     = 20.0
+	burst                   = 30
+	resyncPeriod            = time.Second * 10
+	eventCollectionInterval = time.Minute * 5
+	dataDir                 = "/app/data/"
+	metricsAddress          = ":9090"
+	healthProbeAddress      = ":9091"
+)
+
+var (
 	trafficMetricsCollectionInterval = time.Minute * 1
 	trafficCollectorPodSelector      = "app=traffic-collector"
 	trafficCollectorMetricsPort      = 9095
 	trafficCollectorServerPort       = 8897
 	kafkaBootstrapServers            = ""
 	kafkaPollingInterval             = time.Minute * 5
-	metricsAddress                   = ":9090"
-	healthProbeAddress               = ":9091"
-	dataDir                          = "/app/data/"
 )
 
 func newRotateFileLogger(dir, fileName string, maxSizeMb, maxAge, maxBackups int) zerolog.Logger {
@@ -99,6 +102,7 @@ func main() {
 	flag.Float64Var(&qps, "kube-api-qps", qps, "max qps from this client to kube api server, default 20")
 	flag.IntVar(&burst, "kube-api-burst", burst, "max burst for throttle from this client to kube api server, default 30")
 	flag.DurationVar(&eventCollectionInterval, "event-collect-interval", eventCollectionInterval, "interval to collect events")
+	flag.BoolVar(&api.RedactEnvVar, "redact-env-var", false, "redact env var")
 
 	flag.DurationVar(&trafficMetricsCollectionInterval, "traffic-metric-collection-interval", trafficMetricsCollectionInterval, "interval to collect traffic metrics")
 	flag.StringVar(&trafficCollectorPodSelector, "traffic-collector-pod-selector", trafficCollectorPodSelector, "pod selector for webbai traffic collector")

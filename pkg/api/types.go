@@ -19,6 +19,8 @@ const (
 	KafkaUpdate  EventType = "kafka_update"
 )
 
+var RedactEnvVar = false
+
 type ChangeEvent struct {
 	OldObject *unstructured.Unstructured `json:"old_object"`
 	NewObject *unstructured.Unstructured `json:"new_object"`
@@ -29,6 +31,10 @@ type ChangeEvent struct {
 func NewK8sChangeEvent(oldObj, newObj *unstructured.Unstructured) *ChangeEvent {
 	util.PruneData(oldObj)
 	util.PruneData(newObj)
+	if RedactEnvVar {
+		util.RedactEnvVar(oldObj)
+		util.RedactEnvVar(newObj)
+	}
 	event := &ChangeEvent{
 		OldObject: oldObj,
 		NewObject: newObj,
@@ -69,6 +75,11 @@ type ResourceList struct {
 }
 
 func NewResourceList(objects []runtime.Object) *ResourceList {
+	if RedactEnvVar {
+		for _, object := range objects {
+			util.RedactEnvVar(object.(*unstructured.Unstructured))
+		}
+	}
 	return &ResourceList{
 		Objects: objects,
 		Time:    time.Now().Unix(),

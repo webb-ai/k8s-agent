@@ -122,3 +122,65 @@ func GetDeletionTimestamp(object *unstructured.Unstructured) (time.Time, error) 
 	val, _, _ := unstructured.NestedString(object.Object, "metadata", "deletionTimestamp")
 	return time.Parse(time.RFC3339, val)
 }
+
+func RedactEnvVar(object *unstructured.Unstructured) {
+	if object == nil {
+		return
+	}
+	// pods
+	containers, ok, err := unstructured.NestedFieldNoCopy(object.UnstructuredContent(),
+		"spec", "containers")
+	if ok && err == nil {
+		removeContainerEnv(containers)
+	}
+
+	// deployments, jobs, statefulsets, daemonsets
+	containers, ok, err = unstructured.NestedFieldNoCopy(object.UnstructuredContent(),
+		"spec", "template", "spec", "containers")
+	if ok && err == nil {
+		removeContainerEnv(containers)
+	}
+
+	// cronjobs
+	containers, ok, err = unstructured.NestedFieldNoCopy(object.UnstructuredContent(),
+		"spec", "jobTemplate", "spec", "template", "spec", "containers")
+	if ok && err == nil {
+		removeContainerEnv(containers)
+	}
+
+	// pods
+	containers, ok, err = unstructured.NestedFieldNoCopy(object.UnstructuredContent(),
+		"spec", "initContainers")
+	if ok && err == nil {
+		removeContainerEnv(containers)
+	}
+
+	// deployments, jobs, statefulsets, daemonsets
+
+	containers, ok, err = unstructured.NestedFieldNoCopy(object.UnstructuredContent(),
+		"spec", "template", "spec", "initContainers")
+	if ok && err == nil {
+		removeContainerEnv(containers)
+	}
+
+	// cronjobs
+
+	containers, ok, err = unstructured.NestedFieldNoCopy(object.UnstructuredContent(),
+		"spec", "jobTemplate", "spec", "template", "spec", "initContainers")
+	if ok && err == nil {
+		removeContainerEnv(containers)
+	}
+}
+
+func removeContainerEnv(containers interface{}) {
+	if containers == nil {
+		return
+	}
+
+	containersSlice := containers.([]interface{})
+	for _, container := range containersSlice {
+		containerMap := container.(map[string]interface{})
+		unstructured.RemoveNestedField(containerMap, "env")
+	}
+
+}
