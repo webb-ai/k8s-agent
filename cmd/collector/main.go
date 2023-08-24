@@ -39,13 +39,14 @@ var (
 
 var (
 	// TODO: make this configurable
-	qps                     = 20.0
-	burst                   = 30
-	resyncPeriod            = time.Second * 10
-	eventCollectionInterval = time.Minute * 5
-	dataDir                 = "/app/data/"
-	metricsAddress          = ":9090"
-	healthProbeAddress      = ":9091"
+	qps                      = 20.0
+	burst                    = 30
+	resyncPeriod             = time.Second * 10
+	eventCollectionInterval  = time.Minute * 5
+	backupCollectionInterval = time.Minute * 60
+	dataDir                  = "/app/data/"
+	metricsAddress           = ":9090"
+	healthProbeAddress       = ":9091"
 )
 
 var (
@@ -161,8 +162,9 @@ func main() {
 	discoveryClient := discovery.NewDiscoveryClientForConfigOrDie(config)
 	informerFactory := dynamicinformer.NewDynamicSharedInformerFactory(dynamicClient, resyncPeriod)
 	apiClient := NewClient()
-	collector := k8s.NewCollector(
+	collector := k8s.NewChangeCollector(
 		eventCollectionInterval,
+		backupCollectionInterval,
 		informerFactory,
 		discoveryClient,
 		newRotateFileLogger(dataDir, "k8s_resource.log", 100, 28, 10),
