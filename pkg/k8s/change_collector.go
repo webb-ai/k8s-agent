@@ -19,41 +19,44 @@ import (
 	"k8s.io/klog/v2"
 )
 
-type Collector struct {
-	eventCollectionInterval time.Duration
-	informerFactory         dynamicinformer.DynamicSharedInformerFactory
-	discoveryClient         discovery.ServerResourcesInterface
-	logger                  zerolog.Logger
-	client                  api.Client
-	metrics                 *Metrics
+type ChangeCollector struct {
+	eventCollectionInterval  time.Duration
+	backupCollectionInterval time.Duration
+	informerFactory          dynamicinformer.DynamicSharedInformerFactory
+	discoveryClient          discovery.ServerResourcesInterface
+	logger                   zerolog.Logger
+	client                   api.Client
+	metrics                  *Metrics
 }
 
-func NewCollector(
+func NewChangeCollector(
 	eventCollectionInterval time.Duration,
+	backupCollectionInterval time.Duration,
 	informerFactory dynamicinformer.DynamicSharedInformerFactory,
 	discoveryClient discovery.ServerResourcesInterface,
 	logger zerolog.Logger,
 	client api.Client,
-) *Collector {
-	return &Collector{
-		eventCollectionInterval: eventCollectionInterval,
-		informerFactory:         informerFactory,
-		discoveryClient:         discoveryClient,
-		logger:                  logger,
-		client:                  client,
-		metrics:                 NewMetrics(),
+) *ChangeCollector {
+	return &ChangeCollector{
+		eventCollectionInterval:  eventCollectionInterval,
+		backupCollectionInterval: backupCollectionInterval,
+		informerFactory:          informerFactory,
+		discoveryClient:          discoveryClient,
+		logger:                   logger,
+		client:                   client,
+		metrics:                  NewMetrics(),
 	}
 }
 
-func (c *Collector) noOp(obj interface{}) {
+func (c *ChangeCollector) noOp(obj interface{}) {
 
 }
 
-func (c *Collector) noOpUpdate(oldObj, newObj interface{}) {
+func (c *ChangeCollector) noOpUpdate(oldObj, newObj interface{}) {
 
 }
 
-func (c *Collector) OnAdd(obj interface{}) {
+func (c *ChangeCollector) OnAdd(obj interface{}) {
 	// TODO: retry on retryable errors
 	runtimeObject, err := util.InterfaceToUnstructured(obj)
 	if err != nil {
@@ -74,7 +77,7 @@ func (c *Collector) OnAdd(obj interface{}) {
 	).Inc()
 }
 
-func (c *Collector) OnDelete(obj interface{}) {
+func (c *ChangeCollector) OnDelete(obj interface{}) {
 	runtimeObject, err := util.InterfaceToUnstructured(obj)
 	if err != nil {
 		klog.Error(err)
@@ -93,7 +96,7 @@ func (c *Collector) OnDelete(obj interface{}) {
 	).Inc()
 }
 
-func (c *Collector) OnUpdate(oldObj, newObj interface{}) {
+func (c *ChangeCollector) OnUpdate(oldObj, newObj interface{}) {
 	oldObject, err := util.InterfaceToUnstructured(oldObj)
 	if err != nil {
 		klog.Error(err)
@@ -129,7 +132,7 @@ func (c *Collector) OnUpdate(oldObj, newObj interface{}) {
 
 }
 
-func (c *Collector) addHandlerForGvr(gvr schema.GroupVersionResource, handler cache.ResourceEventHandler) {
+func (c *ChangeCollector) addHandlerForGvr(gvr schema.GroupVersionResource, handler cache.ResourceEventHandler) {
 	klog.Infof("starting to watch for resource %v", gvr)
 	informer := c.informerFactory.ForResource(gvr)
 	_, err := informer.Informer().AddEventHandler(handler)
@@ -138,7 +141,7 @@ func (c *Collector) addHandlerForGvr(gvr schema.GroupVersionResource, handler ca
 	}
 }
 
-func (c *Collector) Start(ctx context.Context) error {
+func (c *ChangeCollector) Start(ctx context.Context) error {
 	klog.Infof("starting k8s resource collector process")
 
 	handler := cache.ResourceEventHandlerFuncs{
@@ -171,21 +174,21 @@ func (c *Collector) Start(ctx context.Context) error {
 
 	c.informerFactory.WaitForCacheSync(ctx.Done())
 	c.informerFactory.Start(ctx.Done())
-	c.startWorkloadCollectionLoop(ctx)
-
+	c.startEventCollectionLoop(ctx)
+	c.startBackupCollectionLoop(ctx)
 	<-ctx.Done()
 	klog.Infof("stopped k8s resource collector process")
 	return nil
 }
 
-func (c *Collector) startWorkloadCollectionLoop(ctx context.Context) {
-	klog.Infof("starting to collect workload resources every %v", c.eventCollectionInterval)
+func (c *ChangeCollector) startEventCollectionLoop(ctx context.Context) {
+	klog.Infof("starting to collect event resources every %v", c.eventCollectionInterval)
 
 	go func() {
 		for {
 			select {
 			case <-time.After(c.eventCollectionInterval):
-				c.collectWorkloadResourcesAndEvents()
+				c.collectEvents()
 			case <-ctx.Done():
 				return
 			}
@@ -193,8 +196,39 @@ func (c *Collector) startWorkloadCollectionLoop(ctx context.Context) {
 	}()
 }
 
-func (c *Collector) collectWorkloadResourcesAndEvents() {
-	for _, gvr := range WorkloadAndEventGVRs {
+func (c *ChangeCollector) startBackupCollectionLoop(ctx context.Context) {
+	klog.Infof("starting to collect workload resources every %v", c.backupCollectionInterval)
+
+	go func() {
+		for {
+			select {
+			case <-time.After(c.backupCollectionInterval):
+				c.backupCollect()
+			case <-ctx.Done():
+				return
+			}
+		}
+	}()
+}
+
+func (c *ChangeCollector) collectEvents() {
+	klog.Infof("listing all resources for %v", eventGVR)
+	listResult, err := c.informerFactory.ForResource(eventGVR).Lister().List(labels.Everything())
+	if err != nil {
+		klog.Error(err)
+		return
+	}
+
+	if len(listResult) > 0 {
+		c.logger.Info().Any("payload", listResult).Msg("resource_list")
+		_ = c.client.SendK8sResources(api.NewResourceList(listResult))
+	} else {
+		klog.Infof("no result for %v", eventGVR)
+	}
+}
+
+func (c *ChangeCollector) backupCollect() {
+	for _, gvr := range BackupGVRs {
 		klog.Infof("listing all resources for %v", gvr)
 		listResult, err := c.informerFactory.ForResource(gvr).Lister().List(labels.Everything())
 		if err != nil {

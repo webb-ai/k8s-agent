@@ -61,8 +61,7 @@ var WatchedGVRs = []schema.GroupVersionResource{
 	validatingWebhookGVR,
 }
 
-var WorkloadAndEventGVRs = []schema.GroupVersionResource{
-	eventGVR,
+var BackupGVRs = []schema.GroupVersionResource{
 	podGVR,
 	serviceGVR,
 	deploymentGVR,
