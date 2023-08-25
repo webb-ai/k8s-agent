@@ -51,7 +51,7 @@ var (
 
 var (
 	trafficMetricsCollectionInterval = time.Minute * 1
-	trafficCollectorPodSelector      = "app=traffic-collector"
+	trafficCollectorPodSelector      = "app=webbai-traffic-collector"
 	trafficCollectorMetricsPort      = 9095
 	trafficCollectorServerPort       = 8897
 	kafkaBootstrapServers            = ""
