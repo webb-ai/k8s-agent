@@ -70,6 +70,7 @@ var BackupGVRs = []schema.GroupVersionResource{
 	jobGVR,
 	cronjobGVR,
 	namespaceGVR,
+	nodeGVR,
 }
 
 func GetAllResources(discoveryClient discovery.ServerResourcesInterface) (map[schema.GroupVersionResource]struct{}, error) {
