@@ -8,6 +8,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/webb-ai/k8s-agent/pkg/agentinfo"
+
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/dynamic/dynamicinformer"
 
@@ -44,6 +46,7 @@ var (
 	resyncPeriod             = time.Second * 10
 	eventCollectionInterval  = time.Minute * 5
 	backupCollectionInterval = time.Minute * 60
+	agentInfoPeriod          = time.Minute * 1
 	dataDir                  = "/app/data/"
 	metricsAddress           = ":9090"
 	healthProbeAddress       = ":9091"
@@ -69,8 +72,8 @@ func newRotateFileLogger(dir, fileName string, maxSizeMb, maxAge, maxBackups int
 	return zerolog.New(writer).With().Timestamp().Logger()
 }
 
-func NewClient() api.Client {
-	client := http.NewWebbaiClient()
+func NewClient(agentVersion, kafkaServers string) api.Client {
+	client := http.NewWebbaiClient(agentVersion, kafkaServers)
 	if client == nil {
 		klog.Warningf("cannot initialize webb.ai http client. Will not stream data to webb.ai")
 		return &api.NoOpClient{}
@@ -78,7 +81,7 @@ func NewClient() api.Client {
 	return client
 }
 
-func newKafkaCollector() *kafka.Collector {
+func newKafkaCollector(client api.Client) *kafka.Collector {
 	if kafkaBootstrapServers == "" {
 		klog.Infof("kafka bootstrap server not configured, skipping kafka collector loop")
 		return nil
@@ -87,7 +90,7 @@ func newKafkaCollector() *kafka.Collector {
 	collector, err := kafka.NewKafkaCollector(
 		bootstrapServers,
 		kafkaPollingInterval,
-		NewClient(),
+		client,
 	)
 	if err != nil {
 		klog.Errorf("error creating kafka collection: %w", err)
@@ -161,7 +164,7 @@ func main() {
 	dynamicClient := dynamic.NewForConfigOrDie(config)
 	discoveryClient := discovery.NewDiscoveryClientForConfigOrDie(config)
 	informerFactory := dynamicinformer.NewDynamicSharedInformerFactory(dynamicClient, resyncPeriod)
-	apiClient := NewClient()
+	apiClient := NewClient(BuildVersion, kafkaBootstrapServers)
 	collector := k8s.NewChangeCollector(
 		eventCollectionInterval,
 		backupCollectionInterval,
@@ -196,8 +199,15 @@ func main() {
 	}
 
 	klog.Infof("creating kafka collector")
-	if kafkaCollector := newKafkaCollector(); kafkaCollector != nil {
+	if kafkaCollector := newKafkaCollector(apiClient); kafkaCollector != nil {
 		if err := controllerManager.Add(kafkaCollector); err != nil {
+			klog.Fatal(err)
+		}
+	}
+
+	klog.Infof("creating agent health controller")
+	if agentInfoController := agentinfo.NewController(agentInfoPeriod, apiClient); agentInfoController != nil {
+		if err := controllerManager.Add(agentInfoController); err != nil {
 			klog.Fatal(err)
 		}
 	}
