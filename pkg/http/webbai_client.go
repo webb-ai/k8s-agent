@@ -75,23 +75,19 @@ func NewWebbaiClient(agentVersion, kafkaServer string) api.Client {
 
 func (c *WebbaiHttpClient) SendChangeEvent(event *api.ChangeEvent) error {
 	klog.Infof("sending change event to %s", c.ChangeUrl)
-	err := c.sendRequest(c.ChangeUrl, event)
-	if err != nil {
-		if event.EventType == api.KafkaUpdate {
-			c.agentInfo.LastKafkaCollectionTime = event.Time
-		} else {
-			c.agentInfo.LastChangeCollectionTime = event.Time
-		}
+	if event.EventType == api.KafkaUpdate {
+		c.agentInfo.LastKafkaCollectionTime = event.Time
+	} else {
+		c.agentInfo.LastChangeCollectionTime = event.Time
 	}
+	err := c.sendRequest(c.ChangeUrl, event)
 	return err
 }
 
 func (c *WebbaiHttpClient) SendK8sResources(list *api.ResourceList) error {
 	klog.Infof("sending k8s resource list to %s", c.ResourceUrl)
+	c.agentInfo.LastResourceCollectionTime = list.Time
 	err := c.sendRequest(c.ResourceUrl, list)
-	if err != nil {
-		c.agentInfo.LastResourceCollectionTime = list.Time
-	}
 	return err
 }
 
