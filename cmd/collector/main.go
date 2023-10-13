@@ -12,6 +12,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/dynamic/dynamicinformer"
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	"github.com/webb-ai/k8s-agent/pkg/kafka"
 
@@ -146,7 +147,7 @@ func main() {
 	klog.Infof("creating controller manager")
 	controllerManager, err := controllerruntime.NewManager(config, controllerruntime.Options{
 		HealthProbeBindAddress:        healthProbeAddress,
-		MetricsBindAddress:            metricsAddress,
+		Metrics:                       metricsserver.Options{BindAddress: metricsAddress},
 		LeaderElection:                true,
 		LeaderElectionID:              "webb-ai.k8s-resource-collector",
 		LeaderElectionNamespace:       os.Getenv("POD_NAMESPACE"),
