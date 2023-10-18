@@ -2,6 +2,8 @@ package util
 
 import (
 	"fmt"
+	appsv1 "k8s.io/api/apps/v1"
+	batchv1 "k8s.io/api/batch/v1"
 	"reflect"
 	"time"
 
@@ -33,6 +35,72 @@ func UnstructuredToPod(unstr *unstructured.Unstructured) (*corev1.Pod, error) {
 		return nil, err
 	}
 	return &pod, nil
+}
+
+// UnstructuredToDeployment converts the unstructured content to Deployment
+func UnstructuredToDeployment(unstr *unstructured.Unstructured) (*appsv1.Deployment, error) {
+	var deployment appsv1.Deployment
+
+	err := runtime.DefaultUnstructuredConverter.FromUnstructured(unstr.UnstructuredContent(), &deployment)
+	if err != nil {
+		return nil, err
+	}
+	return &deployment, nil
+}
+
+// UnstructuredToDaemonSet converts the unstructured content to DaemonSet
+func UnstructuredToDaemonSet(unstr *unstructured.Unstructured) (*appsv1.DaemonSet, error) {
+	var daemonset appsv1.DaemonSet
+
+	err := runtime.DefaultUnstructuredConverter.FromUnstructured(unstr.UnstructuredContent(), &daemonset)
+	if err != nil {
+		return nil, err
+	}
+	return &daemonset, nil
+}
+
+// UnstructuredToStatefulSet converts the unstructured content to StatefulSet
+func UnstructuredToStatefulSet(unstr *unstructured.Unstructured) (*appsv1.StatefulSet, error) {
+	var statefulset appsv1.StatefulSet
+
+	err := runtime.DefaultUnstructuredConverter.FromUnstructured(unstr.UnstructuredContent(), &statefulset)
+	if err != nil {
+		return nil, err
+	}
+	return &statefulset, nil
+}
+
+// UnstructuredToJob converts the unstructured content to Job
+func UnstructuredToJob(unstr *unstructured.Unstructured) (*batchv1.Job, error) {
+	var job batchv1.Job
+
+	err := runtime.DefaultUnstructuredConverter.FromUnstructured(unstr.UnstructuredContent(), &job)
+	if err != nil {
+		return nil, err
+	}
+	return &job, nil
+}
+
+// UnstructuredToCronJob converts the unstructured content to CronJob
+func UnstructuredToCronJob(unstr *unstructured.Unstructured) (*batchv1.CronJob, error) {
+	var cronjob batchv1.CronJob
+
+	err := runtime.DefaultUnstructuredConverter.FromUnstructured(unstr.UnstructuredContent(), &cronjob)
+	if err != nil {
+		return nil, err
+	}
+	return &cronjob, nil
+}
+
+// UnstructuredToReplicaSet converts the unstructured content to ReplicaSet
+func UnstructuredToReplicaSet(unstr *unstructured.Unstructured) (*appsv1.ReplicaSet, error) {
+	var replicaset appsv1.ReplicaSet
+
+	err := runtime.DefaultUnstructuredConverter.FromUnstructured(unstr.UnstructuredContent(), &replicaset)
+	if err != nil {
+		return nil, err
+	}
+	return &replicaset, nil
 }
 
 // UnstructuredToService converts the unstructured content to Service

@@ -2,6 +2,9 @@ package k8s
 
 import (
 	"context"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"time"
 
 	"k8s.io/client-go/discovery"
@@ -68,6 +71,9 @@ func (c *ChangeCollector) OnAdd(obj interface{}) {
 	c.logger.Info().Any("payload", event).Msg("object_add")
 
 	_ = c.client.SendChangeEvent(event)
+	if runtimeObject.GetKind() == "Pod" {
+		c.processPod(nil, runtimeObject)
+	}
 
 	c.metrics.ChangeEventCounter.With(
 		map[string]string{
@@ -88,6 +94,9 @@ func (c *ChangeCollector) OnDelete(obj interface{}) {
 
 	c.logger.Info().Any("payload", event).Msg("object_delete")
 	_ = c.client.SendChangeEvent(event)
+	if runtimeObject.GetKind() == "Pod" {
+		c.processPod(runtimeObject, nil)
+	}
 	c.metrics.ChangeEventCounter.With(
 		map[string]string{
 			EventTypeKey:  "object_delete",
@@ -121,6 +130,9 @@ func (c *ChangeCollector) OnUpdate(oldObj, newObj interface{}) {
 		c.logger.Info().Any("payload", event).Msg("object_update")
 
 		_ = c.client.SendChangeEvent(event)
+		if oldObject.GetKind() == "Pod" {
+			c.processPod(oldObject, newObject)
+		}
 
 		c.metrics.ChangeEventCounter.With(
 			map[string]string{
@@ -130,6 +142,62 @@ func (c *ChangeCollector) OnUpdate(oldObj, newObj interface{}) {
 		).Inc()
 	}
 
+}
+
+func (c *ChangeCollector) processPod(oldPod, newPod interface{}) {
+	var oldIp = ""
+	var newIp = ""
+	var pod *corev1.Pod
+
+	if oldPod != nil {
+		pod, _ := util.UnstructuredToPod(oldPod.(*unstructured.Unstructured))
+		oldIp = pod.Status.PodIP
+	}
+	if newPod != nil {
+		pod, _ := util.UnstructuredToPod(newPod.(*unstructured.Unstructured))
+		newIp = pod.Status.PodIP
+	}
+	if oldIp == newIp {
+		return
+	}
+
+}
+
+// getOwnerRef traverses the ownerRef of a pod until getting a CronJob, Deployment, StatefulSet or DaemonSet
+func (c *ChangeCollector) getOwnerRef(pod *corev1.Pod) *metav1.OwnerReference {
+	namespace := pod.GetNamespace()
+	ref := getServiceOwnerRef(pod.GetOwnerReferences())
+	if ref != nil {
+		return ref
+	}
+	for _, ref := range pod.GetOwnerReferences() {
+		if ref.Kind == "ReplicaSet" {
+			rsObject, err := c.informerFactory.ForResource(replicasetGVR).Lister().ByNamespace(namespace).Get(ref.Name)
+			if err != nil {
+				unstr := rsObject.(*unstructured.Unstructured)
+				rs, _ := util.UnstructuredToReplicaSet(unstr)
+				return getServiceOwnerRef(rs.GetOwnerReferences())
+			}
+		} else if ref.Kind == "Job" {
+			jobObject, err := c.informerFactory.ForResource(jobGVR).Lister().ByNamespace(namespace).Get(ref.Name)
+			if err != nil {
+				unstr := jobObject.(*unstructured.Unstructured)
+				job, _ := util.UnstructuredToJob(unstr)
+				return getServiceOwnerRef(job.GetOwnerReferences())
+			}
+		}
+	}
+	return nil
+}
+
+// getServiceOwnerRef returns the ownerRef of a service
+func getServiceOwnerRef(reference []metav1.OwnerReference) *metav1.OwnerReference {
+	for _, ref := range reference {
+		if ref.Kind == "Deployment" || ref.Kind == "StatefulSet" || ref.Kind == "DaemonSet" || ref.Kind == "CronJob" {
+			return &ref
+		}
+	}
+	return nil
 }
 
 func (c *ChangeCollector) addHandlerForGvr(gvr schema.GroupVersionResource, handler cache.ResourceEventHandler) {
