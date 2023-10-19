@@ -10,67 +10,73 @@ var configMapGVR = schema.GroupVersionResource{Group: "", Version: "v1", Resourc
 var cronjobGVR = schema.GroupVersionResource{Group: "batch", Version: "v1", Resource: "cronjobs"}
 var daemonsetGVR = schema.GroupVersionResource{Group: "apps", Version: "v1", Resource: "daemonsets"}
 var deploymentGVR = schema.GroupVersionResource{Group: "apps", Version: "v1", Resource: "deployments"}
+var endpointSliceGVR = schema.GroupVersionResource{Group: "discovery.k8s.io", Version: "v1", Resource: "endpointslices"}
+var endpointsGVR = schema.GroupVersionResource{Group: "", Version: "v1", Resource: "endpoints"}
 var eventGVR = schema.GroupVersionResource{Group: "", Version: "v1", Resource: "events"}
+var hpaGVR = schema.GroupVersionResource{Group: "autoscaling", Version: "v2", Resource: "horizontalpodautoscalers"}
+var ingressGVR = schema.GroupVersionResource{Group: "networking.k8s.io", Version: "v1", Resource: "ingresses"}
+var ingressclassGVR = schema.GroupVersionResource{Group: "networking.k8s.io", Version: "v1", Resource: "ingressclasses"}
 var jobGVR = schema.GroupVersionResource{Group: "batch", Version: "v1", Resource: "jobs"}
+var kedaScaledObjectGVR = schema.GroupVersionResource{Group: "keda.sh", Version: "v1alpha1", Resource: "ScaledObject"}
+var mutatingWebhookGVR = schema.GroupVersionResource{Group: "admissionregistration.k8s.io", Version: "v1", Resource: "mutatingwebhookconfigurations"}
 var namespaceGVR = schema.GroupVersionResource{Group: "", Version: "v1", Resource: "namespaces"}
+var networkpolicyGVR = schema.GroupVersionResource{Group: "networking.k8s.io", Version: "v1", Resource: "networkpolicies"}
 var nodeGVR = schema.GroupVersionResource{Group: "", Version: "v1", Resource: "nodes"}
-var persistentvolumeclaimGVR = schema.GroupVersionResource{Group: "", Version: "v1", Resource: "persistentvolumeclaims"}
 var persistentvolumeGVR = schema.GroupVersionResource{Group: "", Version: "v1", Resource: "persistentvolumes"}
+var persistentvolumeclaimGVR = schema.GroupVersionResource{Group: "", Version: "v1", Resource: "persistentvolumeclaims"}
 var podGVR = schema.GroupVersionResource{Group: "", Version: "v1", Resource: "pods"}
 var podtemplateGVR = schema.GroupVersionResource{Group: "", Version: "v1", Resource: "podtemplates"}
 var replicasetGVR = schema.GroupVersionResource{Group: "apps", Version: "v1", Resource: "replicasets"}
 var resourcequotaGVR = schema.GroupVersionResource{Group: "", Version: "v1", Resource: "resourcequotas"}
 var secretGVR = schema.GroupVersionResource{Group: "", Version: "v1", Resource: "secrets"}
-var serviceaccountGVR = schema.GroupVersionResource{Group: "", Version: "v1", Resource: "serviceaccounts"}
 var serviceGVR = schema.GroupVersionResource{Group: "", Version: "v1", Resource: "services"}
+var serviceaccountGVR = schema.GroupVersionResource{Group: "", Version: "v1", Resource: "serviceaccounts"}
 var statefulsetGVR = schema.GroupVersionResource{Group: "apps", Version: "v1", Resource: "statefulsets"}
-var ingressclassGVR = schema.GroupVersionResource{Group: "networking.k8s.io", Version: "v1", Resource: "ingressclasses"}
-var ingressGVR = schema.GroupVersionResource{Group: "networking.k8s.io", Version: "v1", Resource: "ingresses"}
-var networkpolicyGVR = schema.GroupVersionResource{Group: "networking.k8s.io", Version: "v1", Resource: "networkpolicies"}
-var hpaGVR = schema.GroupVersionResource{Group: "autoscaling", Version: "v2", Resource: "horizontalpodautoscalers"}
-var vpaGVR = schema.GroupVersionResource{Group: "autoscaling.k8s.io", Version: "v1", Resource: "verticalpodautoscalers"}
-var kedaScaledObjectGVR = schema.GroupVersionResource{Group: "keda.sh", Version: "v1alpha1", Resource: "ScaledObject"}
-var mutatingWebhookGVR = schema.GroupVersionResource{Group: "admissionregistration.k8s.io", Version: "v1", Resource: "mutatingwebhookconfigurations"}
 var validatingWebhookGVR = schema.GroupVersionResource{Group: "admissionregistration.k8s.io", Version: "v1", Resource: "validatingwebhookconfigurations"}
+var vpaGVR = schema.GroupVersionResource{Group: "autoscaling.k8s.io", Version: "v1", Resource: "verticalpodautoscalers"}
 
 var WatchedGVRs = []schema.GroupVersionResource{
 	configMapGVR,
 	cronjobGVR,
 	daemonsetGVR,
 	deploymentGVR,
+	endpointSliceGVR,
+	endpointsGVR,
+	hpaGVR,
+	ingressGVR,
+	ingressclassGVR,
 	jobGVR,
+	kedaScaledObjectGVR,
+	mutatingWebhookGVR,
 	namespaceGVR,
+	networkpolicyGVR,
 	nodeGVR,
-	persistentvolumeclaimGVR,
 	persistentvolumeGVR,
+	persistentvolumeclaimGVR,
 	podGVR,
 	podtemplateGVR,
 	replicasetGVR,
 	resourcequotaGVR,
 	secretGVR,
-	serviceaccountGVR,
 	serviceGVR,
+	serviceaccountGVR,
 	statefulsetGVR,
-	ingressclassGVR,
-	ingressGVR,
-	networkpolicyGVR,
-	hpaGVR,
-	vpaGVR,
-	kedaScaledObjectGVR,
-	mutatingWebhookGVR,
 	validatingWebhookGVR,
+	vpaGVR,
 }
 
 var BackupGVRs = []schema.GroupVersionResource{
-	podGVR,
-	serviceGVR,
-	deploymentGVR,
-	statefulsetGVR,
-	daemonsetGVR,
-	jobGVR,
 	cronjobGVR,
+	daemonsetGVR,
+	deploymentGVR,
+	endpointSliceGVR,
+	endpointsGVR,
+	jobGVR,
 	namespaceGVR,
 	nodeGVR,
+	podGVR,
+	serviceGVR,
+	statefulsetGVR,
 }
 
 func GetAllResources(discoveryClient discovery.ServerResourcesInterface) (map[schema.GroupVersionResource]struct{}, error) {
