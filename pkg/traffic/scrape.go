@@ -47,25 +47,3 @@ func SetPodTargets(pods []*corev1.Pod, targetUrl string) error {
 	defer resp.Body.Close()
 	return nil
 }
-
-// SetServiceIps tells traffic collector what ips map to what name
-func SetServiceIps(
-	serviceByIp map[string]string,
-	serviceByClusterIp map[string]string,
-	targetUrl string,
-) error {
-	data := map[string]map[string]string{
-		"serviceByIp":        serviceByIp,
-		"serviceByClusterIp": serviceByClusterIp,
-	}
-
-	mData, _ := json.Marshal(data)
-	resp, err := retryablehttp.Post(targetUrl, "application/json", bytes.NewBuffer(mData))
-	if err != nil {
-		return fmt.Errorf("error setting service ips at %s: %w", targetUrl, err)
-	}
-
-	//nolint:staticcheck // SA5001 Ignore error here
-	defer resp.Body.Close()
-	return nil
-}

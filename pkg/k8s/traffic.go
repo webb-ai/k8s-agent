@@ -5,9 +5,6 @@ import (
 	"fmt"
 	"time"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime/schema"
-
 	"github.com/rs/zerolog"
 	"github.com/webb-ai/k8s-agent/pkg/api"
 	"github.com/webb-ai/k8s-agent/pkg/traffic"
@@ -60,7 +57,6 @@ func (c *TrafficCollector) Start(ctx context.Context) error {
 	for {
 		select {
 		case <-time.After(c.interval):
-			c.setServiceIps()
 			c.setTargetPods()
 			c.collectMetrics()
 		case <-ctx.Done():
@@ -135,136 +131,4 @@ func (c *TrafficCollector) setTargetPods() {
 			klog.Error(err)
 		}
 	}
-}
-
-func (c *TrafficCollector) setServiceIps() {
-	serviceByIp := make(map[string]string)
-	serviceByClusterIp := make(map[string]string)
-	c.collectServiceIps(serviceByIp)
-	c.collectClusterIps(serviceByClusterIp)
-
-	klog.Infof("new service by ip mapping: %v", serviceByIp)
-	klog.Infof("new service by cluster ip mapping: %v", serviceByClusterIp)
-
-	pods, err := c.informerFactory.ForResource(podGVR).Lister().List(c.podSelector)
-	if err != nil {
-		klog.Error(err)
-		return
-	}
-
-	for _, podRuntimeObject := range pods {
-		pod, _ := util.UnstructuredToPod(podRuntimeObject.(*unstructured.Unstructured))
-
-		if pod.Status.Phase == corev1.PodRunning {
-			podIp := pod.Status.PodIP
-			targetUrl := fmt.Sprintf("http://%s:%d/service_ips", podIp, c.serverPort)
-			klog.Infof("setting pod ips to %s", targetUrl)
-			err = traffic.SetServiceIps(serviceByIp, serviceByClusterIp, targetUrl)
-			if err != nil {
-				klog.Error(err)
-			}
-		}
-	}
-}
-
-func (c *TrafficCollector) collectClusterIps(serviceByClusterIp map[string]string) {
-	serviceObjects, err := c.informerFactory.ForResource(serviceGVR).Lister().List(labels.Everything())
-	if err != nil {
-		klog.Errorf("error fetching services: %w", err)
-	}
-
-	for _, serviceObject := range serviceObjects {
-		unstr := serviceObject.(*unstructured.Unstructured)
-		service, _ := util.UnstructuredToService(unstr)
-		selector, err := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{MatchLabels: service.Spec.Selector})
-		if err != nil {
-			klog.Warningf("unexpected error: cannot convert %w", err)
-			continue
-		}
-
-		clusterIp := util.GetClusterIP(unstr)
-		objectId := c.getObjectIdBySelector(service.Namespace, selector)
-
-		if objectId != "" && clusterIp != "" {
-			serviceByClusterIp[clusterIp] = objectId
-		}
-	}
-}
-
-func (c *TrafficCollector) collectServiceIps(serviceByIp map[string]string) {
-	gvrs := []schema.GroupVersionResource{deploymentGVR, statefulsetGVR, daemonsetGVR, jobGVR}
-
-	for _, gvr := range gvrs {
-		runtimeObjects, err := c.informerFactory.ForResource(gvr).Lister().List(labels.Everything())
-		if err != nil {
-			klog.Errorf("error fetching %s: %w", gvr, err)
-			continue
-		}
-		for _, runtimeObject := range runtimeObjects {
-			unstr := runtimeObject.(*unstructured.Unstructured)
-			labelSelector, err := util.GetLabelSelector(unstr)
-			if err != nil {
-				klog.Errorf("cannot get label selector: %w", err)
-				continue
-			}
-			selector, _ := metav1.LabelSelectorAsSelector(labelSelector)
-			objectId := c.getObjectId(unstr, gvr)
-			c.updatePodIps(selector, objectId, serviceByIp, unstr.GetNamespace())
-		}
-	}
-}
-
-func (c *TrafficCollector) getObjectId(
-	unstr *unstructured.Unstructured,
-	gvr schema.GroupVersionResource,
-) string {
-	var objectId = generateId(unstr)
-	if gvr == jobGVR && len(unstr.GetOwnerReferences()) != 0 {
-		ownerRef := unstr.GetOwnerReferences()[0]
-		if ownerRef.Kind == "CronJob" && ownerRef.APIVersion == "batch/v1" {
-			objectId = fmt.Sprintf("batch/v1|CronJob|%s|%s", unstr.GetNamespace(), ownerRef.Name)
-		}
-	}
-	return objectId
-}
-
-func (c *TrafficCollector) getObjectIdBySelector(
-	namespace string,
-	selector labels.Selector,
-) string {
-	gvrs := []schema.GroupVersionResource{deploymentGVR, statefulsetGVR, daemonsetGVR}
-	for _, gvr := range gvrs {
-		objects, err := c.informerFactory.ForResource(gvr).Lister().ByNamespace(namespace).List(selector)
-		if err != nil {
-			klog.Errorf("error fetching %s: %w", gvr, err)
-			continue
-		}
-		if len(objects) == 1 {
-			object := objects[0]
-			return generateId(object.(*unstructured.Unstructured))
-		}
-	}
-	return ""
-}
-
-func (c *TrafficCollector) updatePodIps(
-	selector labels.Selector, objectId string, mapping map[string]string, namespace string) {
-	pods, err := c.informerFactory.ForResource(podGVR).Lister().ByNamespace(namespace).List(selector)
-
-	if err != nil {
-		klog.Warningf("error fetching pods: %w", err)
-		return
-	}
-
-	for _, podObject := range pods {
-		pod, _ := util.UnstructuredToPod(podObject.(*unstructured.Unstructured))
-		// only consider pods whose ip is different from host ip
-		if pod.Status.PodIP != pod.Status.HostIP {
-			mapping[pod.Status.PodIP] = objectId
-		}
-	}
-}
-
-func generateId(unstr *unstructured.Unstructured) string {
-	return fmt.Sprintf("%s|%s|%s|%s", unstr.GetAPIVersion(), unstr.GetKind(), unstr.GetNamespace(), unstr.GetName())
 }
