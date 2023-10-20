@@ -85,6 +85,10 @@ func (c *TrafficCollector) collectMetrics() {
 			continue
 		}
 		podIp := pod.Status.PodIP
+		if podIp == "" {
+			klog.Warningf("pod %s has no podIP, skipping ...", pod.Name)
+			continue
+		}
 		metricsUrl := fmt.Sprintf("http://%s:%d/webbai_metrics", podIp, c.metricsPort)
 		klog.Infof("scraping %s for prometheus metrics", metricsUrl)
 		metricText, metricFamilies, err := traffic.ScrapeTarget(metricsUrl)
