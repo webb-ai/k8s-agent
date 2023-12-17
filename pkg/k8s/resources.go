@@ -26,6 +26,7 @@ var persistentvolumeGVR = schema.GroupVersionResource{Group: "", Version: "v1", 
 var persistentvolumeclaimGVR = schema.GroupVersionResource{Group: "", Version: "v1", Resource: "persistentvolumeclaims"}
 var podGVR = schema.GroupVersionResource{Group: "", Version: "v1", Resource: "pods"}
 var podtemplateGVR = schema.GroupVersionResource{Group: "", Version: "v1", Resource: "podtemplates"}
+var priorityclassGVR = schema.GroupVersionResource{Group: "scheduling.k8s.io", Version: "v1", Resource: "priorityclasses"}
 var replicasetGVR = schema.GroupVersionResource{Group: "apps", Version: "v1", Resource: "replicasets"}
 var resourcequotaGVR = schema.GroupVersionResource{Group: "", Version: "v1", Resource: "resourcequotas"}
 var secretGVR = schema.GroupVersionResource{Group: "", Version: "v1", Resource: "secrets"}
@@ -55,6 +56,7 @@ var WatchedGVRs = []schema.GroupVersionResource{
 	persistentvolumeclaimGVR,
 	podGVR,
 	podtemplateGVR,
+	priorityclassGVR,
 	replicasetGVR,
 	resourcequotaGVR,
 	secretGVR,
