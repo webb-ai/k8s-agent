@@ -82,10 +82,18 @@ func HasStatusChanged(oldObject *unstructured.Unstructured, newObject *unstructu
 	return hasFieldChanged(oldObject, newObject, "status")
 }
 
-func PruneData(object *unstructured.Unstructured) {
-	if IsConfigMapOrSecret(object) {
+func PruneConfigMapOrSecret(object *unstructured.Unstructured) {
+	if IsConfigMapOrSecret(object) && !IsHelmSecret(object) {
 		unstructured.RemoveNestedField(object.Object, "data")
 	}
+}
+
+func IsHelmSecret(object *unstructured.Unstructured) bool {
+	if object.GetKind() == "Secret" {
+		val, _, _ := unstructured.NestedString(object.Object, "type")
+		return val == "helm.sh/release.v1"
+	}
+	return false
 }
 
 func IsConfigMapOrSecret(object *unstructured.Unstructured) bool {

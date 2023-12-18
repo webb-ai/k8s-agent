@@ -45,6 +45,48 @@ func TestGetTimestamp(t *testing.T) {
 	}
 }
 
+func TestHelmSecret(t *testing.T) {
+	testCases := []struct {
+		name     string
+		secret   *corev1.Secret
+		expected bool
+	}{
+		{
+			"not a helm secret", &corev1.Secret{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "Secret",
+					APIVersion: "v1",
+				},
+				ObjectMeta: metav1.ObjectMeta{Name: "test1", Namespace: "default"},
+				StringData: map[string]string{
+					"data": "data",
+				},
+				Type: corev1.SecretTypeOpaque,
+			},
+			false,
+		},
+		{
+			"a helm secret", &corev1.Secret{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "Secret",
+					APIVersion: "v1",
+				},
+				ObjectMeta: metav1.ObjectMeta{Name: "test2", Namespace: "default"},
+				StringData: map[string]string{
+					"data": "data",
+				},
+				Type: "helm.sh/release.v1",
+			},
+			true,
+		},
+	}
+
+	for _, test := range testCases {
+		obj := toUnstructured(t, test.secret)
+		assert.Equal(t, test.expected, IsHelmSecret(obj))
+	}
+}
+
 func TestRedactEnvVar(t *testing.T) {
 	cases := []struct {
 		name     string

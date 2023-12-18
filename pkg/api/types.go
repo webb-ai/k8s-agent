@@ -29,8 +29,8 @@ type ChangeEvent struct {
 }
 
 func NewK8sChangeEvent(oldObj, newObj *unstructured.Unstructured) *ChangeEvent {
-	util.PruneData(oldObj)
-	util.PruneData(newObj)
+	util.PruneConfigMapOrSecret(oldObj)
+	util.PruneConfigMapOrSecret(newObj)
 	if RedactEnvVar {
 		util.RedactEnvVar(oldObj)
 		util.RedactEnvVar(newObj)
