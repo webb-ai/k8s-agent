@@ -37,6 +37,7 @@ type WebbaiHttpClient struct {
 	ResourceUrl  string
 	MetricsUrl   string
 	AgentInfoUrl string
+	IssueUrl     string
 	token        atomic.String
 	agentInfo    *AgentInfo
 }
@@ -62,6 +63,7 @@ func NewWebbaiClient(agentVersion, kafkaServer string) api.Client {
 		ResourceUrl:  "https://api.webb.ai/k8s_resources",
 		MetricsUrl:   "https://api.webb.ai/metrics",
 		AgentInfoUrl: "https://api.webb.ai/agent_info",
+		IssueUrl:     "https://api.webb.ai/issue",
 		agentInfo:    agentInfo,
 	}
 	err := client.obtainNewToken()
@@ -134,6 +136,12 @@ func (c *WebbaiHttpClient) SendTrafficMetrics(request *prompb.WriteRequest) erro
 
 	klog.Infof("Successfully send traffic metrics")
 	return nil
+}
+
+func (c *WebbaiHttpClient) SendIssue(issueRequest *api.IssueRequest) error {
+	klog.Infof("sending issue to %s", c.IssueUrl)
+	err := c.sendRequest(c.IssueUrl, issueRequest)
+	return err
 }
 
 func (c *WebbaiHttpClient) SendAgentInfo() error {

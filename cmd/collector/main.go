@@ -8,6 +8,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/webb-ai/k8s-agent/pkg/server"
+
 	"github.com/webb-ai/k8s-agent/pkg/agentinfo"
 
 	"k8s.io/apimachinery/pkg/labels"
@@ -20,11 +22,9 @@ import (
 
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 
-	"github.com/webb-ai/k8s-agent/pkg/api"
-
-	"github.com/webb-ai/k8s-agent/pkg/http"
-
 	"github.com/rs/zerolog"
+	"github.com/webb-ai/k8s-agent/pkg/api"
+	"github.com/webb-ai/k8s-agent/pkg/http"
 	"gopkg.in/natefinch/lumberjack.v2"
 	"k8s.io/client-go/dynamic"
 	klog "k8s.io/klog/v2"
@@ -51,6 +51,7 @@ var (
 	dataDir                  = "/app/data/"
 	metricsAddress           = ":9090"
 	healthProbeAddress       = ":9091"
+	apiServerProxyAddress    = ":9092"
 )
 
 var (
@@ -211,6 +212,12 @@ func main() {
 		if err := controllerManager.Add(agentInfoController); err != nil {
 			klog.Fatal(err)
 		}
+	}
+
+	klog.Infof("creating api server proxy")
+	apiServerProxy := server.NewApiServerProxy(apiClient, apiServerProxyAddress)
+	if err := controllerManager.Add(apiServerProxy); err != nil {
+		klog.Fatal(err)
 	}
 
 	ctx := apiserver.SetupSignalContext()

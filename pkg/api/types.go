@@ -85,3 +85,8 @@ func NewResourceList(objects []runtime.Object) *ResourceList {
 		Time:    time.Now().Unix(),
 	}
 }
+
+type IssueRequest struct {
+	IssueSource string `json:"issue_source"`
+	Data        string `json:"data"`
+}
