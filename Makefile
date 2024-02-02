@@ -26,8 +26,7 @@ build:
 clean:
 	-rm collector
 
-image: Dockerfile
-	$(DOCKER) buildx build --platform=linux/amd64 -f Dockerfile -t $(IMAGE_REPO):$(VERSION) .
+push-image: Dockerfile
+	$(DOCKER) buildx build --platform linux/amd64,linux/arm64 -f Dockerfile -t $(IMAGE_REPO):$(VERSION) . --push
 
-push-image: image
-	$(DOCKER) push $(IMAGE_REPO):$(VERSION)
+
