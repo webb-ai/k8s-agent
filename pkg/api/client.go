@@ -6,6 +6,7 @@ type Client interface {
 	SendChangeEvent(*ChangeEvent) error
 	SendK8sResources(*ResourceList) error
 	SendTrafficMetrics(*prompb.WriteRequest) error
+	SendIssue(*IssueRequest) error
 	SendAgentInfo() error
 }
 
@@ -21,6 +22,10 @@ func (nc *NoOpClient) SendK8sResources(*ResourceList) error {
 }
 
 func (nc *NoOpClient) SendTrafficMetrics(*prompb.WriteRequest) error {
+	return nil
+}
+
+func (nc *NoOpClient) SendIssue(request *IssueRequest) error {
 	return nil
 }
 
