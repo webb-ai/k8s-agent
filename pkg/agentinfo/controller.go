@@ -26,7 +26,7 @@ func NewController(
 
 func (c *Controller) Start(ctx context.Context) error {
 	klog.Infof("starting to send agent info every %v", c.interval)
-
+	_ = c.client.SendAgentInfo()
 	for {
 		select {
 		case <-time.After(c.interval):
