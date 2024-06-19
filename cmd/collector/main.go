@@ -12,7 +12,6 @@ import (
 
 	"github.com/webb-ai/k8s-agent/pkg/agentinfo"
 
-	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/dynamic/dynamicinformer"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
@@ -55,12 +54,8 @@ var (
 )
 
 var (
-	trafficMetricsCollectionInterval = time.Minute * 1
-	trafficCollectorPodSelector      = "app=webbai-traffic-collector"
-	trafficCollectorMetricsPort      = 9095
-	trafficCollectorServerPort       = 8897
-	kafkaBootstrapServers            = ""
-	kafkaPollingInterval             = time.Minute * 5
+	kafkaBootstrapServers = ""
+	kafkaPollingInterval  = time.Minute * 5
 )
 
 func newRotateFileLogger(dir, fileName string, maxSizeMb, maxAge, maxBackups int) zerolog.Logger {
@@ -109,11 +104,6 @@ func main() {
 	flag.IntVar(&burst, "kube-api-burst", burst, "max burst for throttle from this client to kube api server, default 30")
 	flag.DurationVar(&eventCollectionInterval, "event-collect-interval", eventCollectionInterval, "interval to collect events")
 	flag.BoolVar(&api.RedactEnvVar, "redact-env-var", false, "redact env var")
-
-	flag.DurationVar(&trafficMetricsCollectionInterval, "traffic-metric-collection-interval", trafficMetricsCollectionInterval, "interval to collect traffic metrics")
-	flag.StringVar(&trafficCollectorPodSelector, "traffic-collector-pod-selector", trafficCollectorPodSelector, "pod selector for webbai traffic collector")
-	flag.IntVar(&trafficCollectorMetricsPort, "traffic-collector-metrics-port", trafficCollectorMetricsPort, "port number to get metrics from traffic collector")
-	flag.IntVar(&trafficCollectorServerPort, "traffic-collector-server-port", trafficCollectorServerPort, "port number of traffic collector server")
 
 	flag.StringVar(&kafkaBootstrapServers, "kafka-bootstrap-servers", kafkaBootstrapServers, "bootstrap servers for kafka")
 	flag.DurationVar(&kafkaPollingInterval, "kafka-polling-interval", kafkaPollingInterval, "polling interval to detect kafka changes")
@@ -179,25 +169,6 @@ func main() {
 	klog.Infof("adding resource collector to controller manager")
 	if err := controllerManager.Add(collector); err != nil {
 		klog.Fatal(err)
-	}
-
-	klog.Infof("creating traffic collector")
-	trafficPodSelector, err := labels.Parse(trafficCollectorPodSelector)
-	if err != nil {
-		klog.Fatal(err)
-	}
-	trafficLogger := newRotateFileLogger(dataDir, "k8s_traffic.log", 100, 28, 10)
-	if trafficCollector := k8s.NewTrafficCollector(
-		informerFactory,
-		trafficMetricsCollectionInterval,
-		trafficPodSelector,
-		trafficCollectorServerPort,
-		trafficCollectorMetricsPort,
-		trafficLogger,
-		apiClient); trafficCollector != nil {
-		if err := controllerManager.Add(trafficCollector); err != nil {
-			klog.Fatal(err)
-		}
 	}
 
 	klog.Infof("creating kafka collector")
