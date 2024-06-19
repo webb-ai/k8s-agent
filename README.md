@@ -29,7 +29,7 @@ K8s resource collector subscribes to the changes in the K8s API server for a spe
 - vpa objects (if vpa is used)
 - keda objects (if keda is used)
 
-For configmaps and secrets, the data field is deleted since it may contain sensitive information.
+For secrets, the data field is deleted since it may contain sensitive information.
 
 ## Deploy to your cluster
 
